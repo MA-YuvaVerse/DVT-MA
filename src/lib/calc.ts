@@ -64,7 +64,8 @@ export function versionCosting(v: VersionLike) {
   const internalCost = n(v.internalCost);
   const totalCost = acqCost + mappingCost + internalCost;
   const value = v.proposalValue == null ? null : v.proposalValue;
-  const margin = value == null ? null : value - totalCost;
+  // no costs entered yet -> margin unknown (not 100%)
+  const margin = value == null || totalCost === 0 ? null : value - totalCost;
   return {
     acqCost,
     mappingCost,

@@ -9,7 +9,7 @@ import { Card, Empty, PageHeader, StatusBadge } from "@/components/ui";
 import { ActionForm, Submit } from "@/components/client";
 import { Notes } from "@/components/DocsNotes";
 import { CompanyFields } from "../CompanyFields";
-import { deleteCompany, moveContact, saveContact, saveSensor, updateCompany } from "../actions";
+import { deleteCompany, mergeCompany, moveContact, saveContact, saveSensor, updateCompany } from "../actions";
 
 export default async function CompanyPage({ params }: { params: Promise<{ id: string }> }) {
   const [{ id }, user] = await Promise.all([params, requireUser()]);
@@ -42,6 +42,18 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
           <CompanyFields c={c} vendorTypes={vendorTypes} />
           <div className="mt-3"><Submit>Save company</Submit></div>
         </ActionForm>
+        {user.role === "ADMIN" && (
+          <details className="mt-3 border-t border-slate-100 pt-2 text-sm">
+            <summary className="cursor-pointer text-slate-500">Duplicate? Merge this company into another…</summary>
+            <ActionForm action={mergeCompany.bind(null, c.id)} className="mt-2 flex flex-wrap gap-2">
+              <select name="targetId" className="input max-w-sm" required defaultValue="">
+                <option value="">— keep this company —</option>
+                {otherCompanies.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+              <Submit className="btn-danger" confirm={`Move all proposals, projects, quotes and contacts of ${c.name} to the selected company and delete ${c.name}?`}>Merge</Submit>
+            </ActionForm>
+          </details>
+        )}
       </Card>
 
       <Card title={`Contacts (${c.contacts.filter((x) => x.active).length} active)`} className="mb-4">

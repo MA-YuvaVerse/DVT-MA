@@ -79,9 +79,9 @@ export default async function Dashboard() {
         <Card title="Top open proposals" actions={<Link className="link text-xs" href="/reports/open-by-value">All</Link>} bodyClass="p-0 overflow-x-auto">
           {open.length === 0 ? <Empty>No open proposals.</Empty> : (
             <table className="table">
-              <thead><tr><th>Proposal</th><th>Client</th><th>Project</th><th>Status</th><th className="text-right">Value</th></tr></thead>
+              <thead><tr><th>Proposal</th><th>Client</th><th>Project</th><th className="text-right">Value</th></tr></thead>
               <tbody>{[...open].sort((a, b) => b.pipelineValue - a.pipelineValue).slice(0, 10).map((p) => (
-                <tr key={p.id}><td><Link className="link" href={`/proposals/${p.id}`}>{p.number}</Link></td><td>{p.client}</td><td className="max-w-[200px] truncate">{p.title}</td><td><StatusBadge status={p.status} /></td><td className="text-right">{money(p.pipelineValue)}</td></tr>
+                <tr key={p.id}><td><Link className="link" href={`/proposals/${p.id}`}>{p.number}</Link>{p.status === "Open/HIGH" && <span className="ml-1 text-[10px] font-semibold text-indigo-700">HIGH</span>}</td><td>{p.client}</td><td className="max-w-[200px] truncate">{p.title}</td><td className="text-right whitespace-nowrap">{money(p.pipelineValue)}</td></tr>
               ))}</tbody>
             </table>
           )}

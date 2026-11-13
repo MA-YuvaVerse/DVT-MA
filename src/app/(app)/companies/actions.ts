@@ -116,3 +116,54 @@ export async function saveSensor(companyId: string, sensorId: string | null, _p:
     return { ok: sensorId ? "Sensor saved." : "Sensor added." };
   });
 }
+
+/**
+ * Merge a duplicate company (e.g. two spellings) into another. Everything that
+ * points at the duplicate is moved to the target, its roles are combined and
+ * the duplicate is deleted.
+ */
+export async function mergeCompany(sourceId: string, _p: ActionResult, fd: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  const targetId = str(fd, "targetId");
+  const res = await run(async () => {
+    if (!targetId || targetId === sourceId) throw new Error("Pick the company to merge into.");
+    const [src, tgt] = await Promise.all([
+      prisma.company.findUniqueOrThrow({ where: { id: sourceId }, include: { sensors: true } }),
+      prisma.company.findUniqueOrThrow({ where: { id: targetId }, include: { sensors: true } }),
+    ]);
+    await prisma.$transaction(async (tx) => {
+      for (const s of src.sensors) {
+        const same = tgt.sensors.find((t) => t.name.toLowerCase() === s.name.toLowerCase());
+        if (same) {
+          await tx.acquisitionQuote.updateMany({ where: { sensorId: s.id }, data: { sensorId: same.id } });
+          await tx.vendorSensor.delete({ where: { id: s.id } });
+        } else {
+          await tx.vendorSensor.update({ where: { id: s.id }, data: { companyId: targetId } });
+        }
+      }
+      await tx.contact.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
+      await tx.proposal.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
+      await tx.project.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
+      await tx.project.updateMany({ where: { acqVendorId: sourceId }, data: { acqVendorId: targetId } });
+      await tx.project.updateMany({ where: { processingVendorId: sourceId }, data: { processingVendorId: targetId } });
+      await tx.acquisitionQuote.updateMany({ where: { vendorId: sourceId }, data: { vendorId: targetId } });
+      await tx.mappingQuote.updateMany({ where: { vendorId: sourceId }, data: { vendorId: targetId } });
+      await tx.note.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
+      await tx.company.delete({ where: { id: sourceId } });
+      await tx.company.update({
+        where: { id: targetId },
+        data: {
+          isClient: tgt.isClient || src.isClient,
+          isProspect: tgt.isProspect || src.isProspect,
+          isAcqVendor: tgt.isAcqVendor || src.isAcqVendor,
+          isMappingVendor: tgt.isMappingVendor || src.isMappingVendor,
+          qboCustomerId: tgt.qboCustomerId ?? src.qboCustomerId,
+          qboVendorId: tgt.qboVendorId ?? src.qboVendorId,
+          notes: [tgt.notes, `Merged from “${src.name}” on ${new Date().toISOString().slice(0, 10)}`].filter(Boolean).join("\n"),
+        },
+      });
+    });
+  });
+  if (res?.error) return res;
+  redirect(`/companies/${targetId}`);
+}

@@ -1,0 +1,8 @@
+node_modules
+.next
+.env
+storage
+data
+*.xlsx
+*.csv
+.git
