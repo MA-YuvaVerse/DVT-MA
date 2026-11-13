@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: dvt
+      POSTGRES_PASSWORD: dvt_dev
+      POSTGRES_DB: dvt_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - dvt_pgdata:/var/lib/postgresql/data
+volumes:
+  dvt_pgdata:

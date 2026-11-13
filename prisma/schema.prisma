@@ -1,0 +1,386 @@
+// DroneView Ops — data model
+// Mirrors DroneView's five worksheets (Proposals, Data Acquisition Quotes,
+// Mapping Quotes, Jobs, Projects) plus their lookup tabs, normalised so that
+// vendor quotes are one-to-many per proposal version.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum OpportunityType {
+  NEW
+  ADD_ON
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  initials     String   @unique // short initials shown as "DVT PM"
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  proposalsManaged Proposal[]      @relation("ProposalPm")
+  proposalsCreated Proposal[]      @relation("ProposalCreatedBy")
+  projectsManaged  Project[]       @relation("ProjectPm")
+  documents        Document[]
+  notes            Note[]
+  statusChanges    StatusHistory[]
+}
+
+/// Single organisation master: clients, prospects and vendors (a company can be several).
+model Company {
+  id              String   @id @default(cuid())
+  code            String   @unique // C0001
+  name            String   @unique // full legal / display name
+  shortName       String? // short label used in lists
+  isClient        Boolean  @default(false)
+  isProspect      Boolean  @default(false)
+  isAcqVendor     Boolean  @default(false) // aerial data acquisition vendor
+  isMappingVendor Boolean  @default(false) // mapping / processing vendor
+  vendorType      String? // Manned, Drone, Mobile, Scanning...
+  active          Boolean  @default(true)
+  address         String?
+  city            String?
+  state           String?
+  phone           String?
+  website         String?
+  qboCustomerId   String?  @unique
+  qboVendorId     String?  @unique
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  contacts          Contact[]
+  sensors           VendorSensor[]
+  proposals         Proposal[]
+  projects          Project[]          @relation("ProjectClient")
+  acqQuotes         AcquisitionQuote[]
+  mappingQuotes     MappingQuote[]
+  acqProjects       Project[]          @relation("ProjectAcqVendor")
+  processingProjects Project[]         @relation("ProjectProcessingVendor")
+  notesList         Note[]
+}
+
+/// People at client and vendor companies. When someone changes employer,
+/// the old contact is set inactive and a new one is created (history kept).
+model Contact {
+  id        String   @id @default(cuid())
+  companyId String
+  firstName String
+  lastName  String   @default("")
+  title     String?
+  email     String?
+  phone     String?
+  location  String? // vendor base / office
+  active    Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  proposals Proposal[]
+  projects  Project[]
+  notesList Note[]
+
+  @@index([companyId])
+}
+
+/// Equipment a vendor flies with (replaces the hardcoded sensor dropdown).
+model VendorSensor {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String // Riegl LiDAR + P1
+  sensorType String? // Image + LiDAR
+  active     Boolean  @default(true)
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  acqQuotes AcquisitionQuote[]
+
+  @@unique([companyId, name])
+}
+
+/// Admin-editable dropdown values (Project Type, Sensor Type, Deliverables, ...).
+model ListItem {
+  id        String  @id @default(cuid())
+  list      String
+  value     String
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  @@unique([list, value])
+  @@index([list, sortOrder])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+/// Sequence counters for proposal and project numbering.
+model Counter {
+  key   String @id
+  value Int
+}
+
+/// One proposal opportunity. Pipeline counts each proposal once,
+/// whatever number of versions it has.
+model Proposal {
+  id              String          @id @default(cuid())
+  number          String          @unique // 202600361 (or legacy 2600361)
+  companyId       String
+  clientContactId String?
+  dvtPmId         String?
+  opportunityType OpportunityType @default(NEW)
+  parentProjectId String? // add-on work against an existing project
+  city            String?
+  state           String?
+  latitude        Float?
+  longitude       Float?
+  folderUrl       String?
+  comments        String?
+  createdById     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  company       Company           @relation(fields: [companyId], references: [id])
+  clientContact Contact?          @relation(fields: [clientContactId], references: [id])
+  dvtPm         User?             @relation("ProposalPm", fields: [dvtPmId], references: [id])
+  createdBy     User?             @relation("ProposalCreatedBy", fields: [createdById], references: [id])
+  parentProject Project?          @relation("AddOnProposals", fields: [parentProjectId], references: [id])
+  versions      ProposalVersion[]
+  documents     Document[]
+  notes         Note[]
+  projects      Project[]         @relation("ProjectFromProposal")
+
+  @@index([companyId])
+}
+
+/// A version / scope option of a proposal: .1, .2, .3 ...
+/// Bundles (area A, area B, combined) are separate versions of one proposal.
+model ProposalVersion {
+  id                    String    @id @default(cuid())
+  proposalId            String
+  versionNo             Int
+  code                  String    @unique // 202600361.1
+  legacyId              String? // original sheet ID, e.g. 2600361.0
+  title                 String // project name for this version
+  status                String    @default("Preparing Proposal")
+  statusChangedAt       DateTime  @default(now())
+  requestDate           DateTime?
+  dueDate               DateTime?
+  lastClientContactDate DateTime?
+  followUpDate          DateTime?
+  proposalValue         Decimal?  @db.Decimal(14, 2) // quoted to client (not cost-plus)
+  internalCost          Decimal?  @db.Decimal(14, 2) // DVT mob / internal costs
+  mappingAcres          Decimal?  @db.Decimal(14, 2)
+  flightAcres           Decimal?  @db.Decimal(14, 2)
+  isLinear              Boolean   @default(false)
+  linearMiles           Decimal?  @db.Decimal(12, 2)
+  linearWidthFt         Decimal?  @db.Decimal(12, 2)
+  gsdCm                 Decimal?  @db.Decimal(8, 2)
+  lidarPpsm             Decimal?  @db.Decimal(8, 2)
+  projectType           String?
+  sensorType            String?
+  deliverables          String?
+  comments              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  proposal      Proposal           @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  acqQuotes     AcquisitionQuote[]
+  mappingQuotes MappingQuote[]
+  projects      Project[]
+
+  @@unique([proposalId, versionNo])
+}
+
+/// Replaces "Acquisition Vendor 1/2/3" columns: any number per version.
+model AcquisitionQuote {
+  id         String    @id @default(cuid())
+  versionId  String
+  vendorId   String
+  sensorId   String?
+  cost       Decimal?  @db.Decimal(14, 2)
+  frameCount Int?
+  quoteDate  DateTime?
+  status     String    @default("Requested") // Requested, Received, Declined
+  isSelected Boolean   @default(false) // likely / selected vendor used for costing
+  comments   String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  version ProposalVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  vendor  Company         @relation(fields: [vendorId], references: [id])
+  sensor  VendorSensor?   @relation(fields: [sensorId], references: [id])
+
+  @@index([versionId])
+}
+
+/// Replaces fixed mapping-vendor columns: any number per version.
+model MappingQuote {
+  id         String    @id @default(cuid())
+  versionId  String
+  vendorId   String
+  cost       Decimal?  @db.Decimal(14, 2)
+  days       Int?
+  quoteDate  DateTime?
+  status     String    @default("Requested")
+  isSelected Boolean   @default(false)
+  comments   String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  version ProposalVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  vendor  Company         @relation(fields: [vendorId], references: [id])
+
+  @@index([versionId])
+}
+
+/// Jobs + Projects worksheets merged: one record per DVT project number.
+model Project {
+  id                 String    @id @default(cuid())
+  number             String    @unique // 26071804P, 26071803P-1
+  name               String
+  companyId          String
+  clientContactId    String?
+  dvtPmId            String?
+  proposalId         String?
+  versionId          String?
+  parentProjectId    String?
+  addOnSeq           Int? // n in "-n" for add-ons
+  acquisitionMethod  String? // Plane, Drone, Mobile, Scanner, Other
+  status             String    @default("Awarded")
+  statusChangedAt    DateTime  @default(now())
+  pidOrTargets       String?
+  city               String?
+  state              String?
+  latitude           Float?
+  longitude          Float?
+  acres              Decimal?  @db.Decimal(14, 2)
+  linearMiles        Decimal?  @db.Decimal(12, 2)
+  projectType        String?
+  sensorType         String?
+  deliverables       String?
+  folderUrl          String?
+  comments           String?
+
+  // Economics (former Jobs sheet)
+  clientPoJob        String?
+  invoiceNumbers     String?
+  contractValue      Decimal?  @db.Decimal(14, 2) // project value to be billed
+  billedAmount       Decimal?  @db.Decimal(14, 2)
+  acqVendorId        String?
+  acqCost            Decimal?  @db.Decimal(14, 2)
+  processingVendorId String?
+  processingCost     Decimal?  @db.Decimal(14, 2)
+  mobCosts           Decimal?  @db.Decimal(14, 2)
+  invoicePaid        Boolean   @default(false)
+
+  // Milestones (former Projects sheet)
+  awardDate               DateTime?
+  scheduledClientDelivery DateTime?
+  acqVendorNtp            DateTime?
+  dateFlown               DateTime?
+  controlOut              DateTime?
+  controlIn               DateTime?
+  controlToFlightProvider DateTime?
+  imageryIn               DateTime?
+  lidarIn                 DateTime?
+  acqDataQc               DateTime?
+  sentToSub               DateTime?
+  atIn                    DateTime?
+  atApproved              DateTime?
+  orthoIn                 DateTime?
+  mappingIn               DateTime?
+  subDeliveryPromised     DateTime?
+  actualClientDelivery    DateTime?
+  invoiceDate             DateTime?
+  paymentDate             DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company          Company          @relation("ProjectClient", fields: [companyId], references: [id])
+  clientContact    Contact?         @relation(fields: [clientContactId], references: [id])
+  dvtPm            User?            @relation("ProjectPm", fields: [dvtPmId], references: [id])
+  proposal         Proposal?        @relation("ProjectFromProposal", fields: [proposalId], references: [id])
+  version          ProposalVersion? @relation(fields: [versionId], references: [id])
+  parentProject    Project?         @relation("ProjectAddOns", fields: [parentProjectId], references: [id])
+  addOns           Project[]        @relation("ProjectAddOns")
+  addOnProposals   Proposal[]       @relation("AddOnProposals")
+  acqVendor        Company?         @relation("ProjectAcqVendor", fields: [acqVendorId], references: [id])
+  processingVendor Company?         @relation("ProjectProcessingVendor", fields: [processingVendorId], references: [id])
+  documents        Document[]
+  notes            Note[]
+  statusHistory    StatusHistory[]
+
+  @@index([status])
+}
+
+model StatusHistory {
+  id         String   @id @default(cuid())
+  projectId  String
+  fromStatus String?
+  toStatus   String
+  changedAt  DateTime @default(now())
+  userId     String?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id])
+}
+
+/// Uploaded files. Stored by the configured storage provider (local disk now,
+/// Google Drive later); `folder` is one of the standard subfolders.
+model Document {
+  id           String   @id @default(cuid())
+  proposalId   String?
+  projectId    String?
+  folder       String
+  fileName     String
+  storageKey   String?
+  externalUrl  String?
+  mimeType     String?
+  size         Int?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  proposal   Proposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy User?     @relation(fields: [uploadedById], references: [id])
+}
+
+/// Communication notes / activity log (calls, emails, meetings, follow-ups).
+model Note {
+  id         String   @id @default(cuid())
+  date       DateTime @default(now())
+  type       String   @default("Note")
+  body       String
+  proposalId String?
+  projectId  String?
+  companyId  String?
+  contactId  String?
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  proposal Proposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  project  Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  company  Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact  Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  user     User?     @relation(fields: [userId], references: [id])
+}
