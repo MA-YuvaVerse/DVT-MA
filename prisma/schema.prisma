@@ -148,6 +148,7 @@ model Proposal {
   dvtPmId         String?
   opportunityType OpportunityType @default(NEW)
   parentProjectId String? // add-on work against an existing project
+  currentVersionId String?        @unique // the active version: drives "Current Proposal Value" and pipeline
   city            String?
   state           String?
   latitude        Float?
@@ -164,6 +165,7 @@ model Proposal {
   createdBy     User?             @relation("ProposalCreatedBy", fields: [createdById], references: [id])
   parentProject Project?          @relation("AddOnProposals", fields: [parentProjectId], references: [id])
   versions      ProposalVersion[]
+  currentVersion ProposalVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
   documents     Document[]
   notes         Note[]
   projects      Project[]         @relation("ProjectFromProposal")
@@ -195,6 +197,7 @@ model ProposalVersion {
   linearWidthFt         Decimal?  @db.Decimal(12, 2)
   gsdCm                 Decimal?  @db.Decimal(8, 2)
   lidarPpsm             Decimal?  @db.Decimal(8, 2)
+  gcpCount              Int? // number of ground control points / targets
   projectType           String?
   sensorType            String?
   deliverables          String?
@@ -203,6 +206,7 @@ model ProposalVersion {
   updatedAt             DateTime  @updatedAt
 
   proposal      Proposal           @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  currentOf     Proposal?          @relation("CurrentVersion")
   acqQuotes     AcquisitionQuote[]
   mappingQuotes MappingQuote[]
   projects      Project[]
@@ -274,6 +278,7 @@ model Project {
   longitude          Float?
   acres              Decimal?  @db.Decimal(14, 2)
   linearMiles        Decimal?  @db.Decimal(12, 2)
+  gcpCount           Int?
   projectType        String?
   sensorType         String?
   deliverables       String?

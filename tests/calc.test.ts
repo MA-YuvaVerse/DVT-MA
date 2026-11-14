@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { proposalPipeline, proposalStatus, versionCosting, versionProbability, projectMargin, DEFAULT_PROBABILITY } from "../src/lib/calc";
+import { proposalPipeline, proposalStatus, proposedValue, versionCosting, versionProbability, projectMargin, DEFAULT_PROBABILITY } from "../src/lib/calc";
 
 const today = new Date("2026-11-13T00:00:00Z");
 const v = (versionNo: number, status: string, proposalValue: number | null, requestDate = new Date("2026-11-01T00:00:00Z")) => ({ versionNo, status, proposalValue, requestDate });
@@ -60,4 +60,17 @@ test("margin is unknown until a cost is entered", () => {
   const c = versionCosting({ versionNo: 1, status: "Open", proposalValue: 15000 });
   assert.equal(c.margin, null);
   assert.equal(c.marginPct, null);
+});
+
+test("CURRENT rule: pipeline is the current version's value, at proposal level", () => {
+  const vs = [v(1, "Open", 80000), v(2, "Open", 60000)];
+  // defaults to the latest version when none is marked current
+  assert.equal(proposalPipeline(vs, "CURRENT", DEFAULT_PROBABILITY, today).value, 60000);
+  // explicit current version
+  const p = proposalPipeline(vs, "CURRENT", DEFAULT_PROBABILITY, today, 1);
+  assert.equal(p.value, 80000);
+  assert.equal(p.weighted, 32000);
+  // a closed current version contributes nothing
+  assert.equal(proposalPipeline([v(1, "Open", 5), v(2, "Cancelled", 9)], "CURRENT", DEFAULT_PROBABILITY, today, 2).value, 0);
+  assert.equal(proposedValue(vs, 1), 80000);
 });

@@ -231,6 +231,7 @@ async function main() {
       },
     });
     pCount++;
+    const made: { id: string; status: string }[] = [];
     for (const [i, r] of rows.entries()) {
       const legacy = parseLegacyId(r._first)!;
       const miles = n(r, "Linear Project Miles");
@@ -251,6 +252,7 @@ async function main() {
         },
       });
       vCount++;
+      made.push({ id: v.id, status: v.status });
       versionByLegacy.set(legacy.raw, v.id);
       const projNo = s(r, "DVT Project Number");
       if (projNo) for (const pn of projNo.split(/[;,\s]+/)) if (/^\d{8}/.test(pn)) proposalByProjectNo.set(pn, { proposalId: proposal.id, versionId: v.id, companyId: c.id });
@@ -263,6 +265,10 @@ async function main() {
         mqCount++;
       }
     }
+    // current version: the won one, else the latest open one, else the latest
+    const open = ["Preparing Proposal", "Open", "Open/HIGH"];
+    const current = made.find((m) => m.status === "DVT Won") ?? [...made].reverse().find((m) => open.includes(m.status)) ?? made[made.length - 1];
+    if (current) await prisma.proposal.update({ where: { id: proposal.id }, data: { currentVersionId: current.id } });
   }
 
   // ---------- Acquisition quotes (Vendor 1/2/3 columns -> rows) ----------

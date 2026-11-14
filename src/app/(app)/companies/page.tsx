@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { Empty, PageHeader } from "@/components/ui";
+import { Empty, LinkTabs, PageHeader } from "@/components/ui";
 
 type SP = { q?: string; type?: string; inactive?: string };
 const TYPES: Record<string, Prisma.CompanyWhereInput> = {
@@ -20,6 +20,9 @@ export default async function CompaniesPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title="Companies" subtitle={`${rows.length} shown`} actions={<Link href="/companies/new" className="btn-primary">New company</Link>} />
+      <div className="mb-3">
+        <LinkTabs active={sp.type ?? ""} tabs={[["", "All"], ["client", "Customers"], ["prospect", "Prospects"], ["acq", "Acquisition vendors"], ["mapping", "Mapping vendors"]].map(([k, label]) => ({ key: k, label, href: k ? `/companies?type=${k}` : "/companies" }))} />
+      </div>
       <form className="card mb-3 grid gap-2 p-3 sm:grid-cols-[2fr_1fr_auto_auto]">
         <input name="q" defaultValue={sp.q} className="input" placeholder="Search name or code…" />
         <select name="type" defaultValue={sp.type ?? ""} className="input">

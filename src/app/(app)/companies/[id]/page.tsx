@@ -58,7 +58,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
 
       <Card title={`Contacts (${c.contacts.filter((x) => x.active).length} active)`} className="mb-4">
         <div className="hidden grid-cols-[1fr_1fr_1fr_1.4fr_1fr_1fr_0.5fr_auto] gap-2 px-1 text-[11px] font-semibold text-slate-500 md:grid">
-          <span>First</span><span>Last</span><span>Title</span><span>Email</span><span>Phone</span><span>{isVendor ? "Location / base" : "Location"}</span><span>Active</span><span />
+          <span>First</span><span>Last</span><span>Title</span><span>Email</span><span>Phone</span><span>Location (city, state)</span><span>Active</span><span />
         </div>
         <div className="space-y-2">
           {[...c.contacts, null].map((ct) => (
@@ -70,7 +70,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
                   <input name="title" className="input" placeholder="Title" defaultValue={ct?.title ?? ""} />
                   <input name="email" type="email" className="input" placeholder="Email" defaultValue={ct?.email ?? ""} />
                   <input name="phone" className="input" placeholder="Phone" defaultValue={ct?.phone ?? ""} />
-                  <input name="location" className="input" placeholder="Location" defaultValue={ct?.location ?? ""} />
+                  <input name="location" className="input" placeholder="City, ST" defaultValue={ct?.location ?? ""} />
                   {ct ? <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="active" defaultChecked={ct.active} /><span className="md:hidden">Active</span></label> : <span />}
                   <Submit className={ct ? "btn-secondary btn-sm" : "btn-primary btn-sm"} pendingText="…">{ct ? "Save" : "Add"}</Submit>
                 </div>

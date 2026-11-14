@@ -1,7 +1,7 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
-import { proposalPipeline, proposalStatus, proposedValue, versionCosting, wonValue } from "./calc";
+import { currentVersion, proposalPipeline, proposalStatus, proposedValue, versionCosting, wonValue } from "./calc";
 import { toNum, cityState } from "./format";
 import { getPipelineConfig } from "./settings";
 
@@ -39,9 +39,14 @@ export function plainVersion(v: ProposalWithVersions["versions"][number]) {
   };
 }
 
+/** Version number of the proposal's current version (falls back to the latest). */
+export function currentVersionNo(p: { currentVersionId: string | null; versions: { id: string; versionNo: number }[] }) {
+  return currentVersion(p.versions, p.versions.find((v) => v.id === p.currentVersionId)?.versionNo)?.versionNo ?? null;
+}
+
 export function proposalTitle(p: ProposalWithVersions) {
-  const latest = p.versions[p.versions.length - 1];
-  return latest?.title ?? "(untitled)";
+  const no = currentVersionNo(p);
+  return p.versions.find((v) => v.versionNo === no)?.title ?? "(untitled)";
 }
 
 /** "202600361 Client Project City ST" — the concatenated display name. */
@@ -59,14 +64,14 @@ export async function loadProposalSummaries(where: Prisma.ProposalWhereInput = {
   const today = new Date();
   return rows.map((p) => {
     const versions = p.versions.map(plainVersion);
-    const pipe = proposalPipeline(versions, cfg.rule, cfg.prob, today);
-    const latest = p.versions[p.versions.length - 1];
+    const curNo = currentVersionNo(p);
+    const pipe = proposalPipeline(versions, cfg.rule, cfg.prob, today, curNo);
+    const latest = p.versions.find((v) => v.versionNo === curNo) ?? p.versions[p.versions.length - 1];
     const followUps = p.versions.map((v) => v.followUpDate).filter((d): d is Date => !!d);
     const requestDates = p.versions.map((v) => v.requestDate).filter((d): d is Date => !!d);
-    const best = p.versions.reduce<ProposalWithVersions["versions"][number] | undefined>(
-      (b, v) => (toNum(v.proposalValue) ?? -1) > (toNum(b?.proposalValue) ?? -1) ? v : b,
-      undefined,
-    );
+    const best = latest;
+    const selAcq = best?.acqQuotes.filter((q) => q.isSelected) ?? [];
+    const selMap = best?.mappingQuotes.filter((q) => q.isSelected) ?? [];
     const bestCosting = best ? versionCosting(plainVersion(best)) : null;
     return {
       id: p.id,
@@ -83,6 +88,9 @@ export async function loadProposalSummaries(where: Prisma.ProposalWhereInput = {
       projects: p.projects.map((x) => x.number),
       status: proposalStatus(p.versions),
       versionCount: p.versions.length,
+      currentCode: latest?.code ?? null,
+      currentValue: toNum(latest?.proposalValue),
+      linearMiles: latest?.isLinear ? toNum(latest.linearMiles) : null,
       requestDate: requestDates.length ? new Date(Math.min(...requestDates.map((d) => d.getTime()))) : p.createdAt,
       followUpDate: followUps.length ? new Date(Math.min(...followUps.map((d) => d.getTime()))) : null,
       projectType: latest?.projectType ?? null,
@@ -93,10 +101,11 @@ export async function loadProposalSummaries(where: Prisma.ProposalWhereInput = {
       pipelineValue: pipe.value,
       weightedValue: pipe.weighted,
       probability: pipe.probability,
-      proposedValue: proposedValue(versions),
+      proposedValue: proposedValue(versions, curNo),
       wonValue: wonValue(versions),
       hasValue: p.versions.some((v) => v.proposalValue != null),
-      likelyAcqVendor: best?.acqQuotes.find((q) => q.isSelected)?.vendor.shortName ?? null,
+      likelyAcqVendor: selAcq.map((q) => q.vendor.shortName ?? q.vendor.name).join(", ") || null,
+      mappingVendor: selMap.map((q) => q.vendor.shortName ?? q.vendor.name).join(", ") || null,
       likelyAcqCost: bestCosting?.acqCost || null,
       mappingCost: bestCosting?.mappingCost || null,
       margin: bestCosting?.margin ?? null,

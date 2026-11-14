@@ -30,7 +30,7 @@ export function ProposalHeaderFields({ p, clients, contacts, users, projects }: 
 type V = {
   title: string; status: string; requestDate: Date | null; dueDate: Date | null; lastClientContactDate: Date | null; followUpDate: Date | null;
   proposalValue: unknown; mappingAcres: unknown; flightAcres: unknown; isLinear: boolean; linearMiles: unknown; linearWidthFt: unknown;
-  gsdCm: unknown; lidarPpsm: unknown; projectType: string | null; sensorType: string | null; deliverables: string | null; comments: string | null;
+  gsdCm: unknown; lidarPpsm: unknown; gcpCount?: number | null; projectType: string | null; sensorType: string | null; deliverables: string | null; comments: string | null;
 };
 
 export function VersionScopeFields({ v, lists, statusLocked }: { v?: V; lists: { projectType: string[]; sensorType: string[]; deliverables: string[] }; statusLocked?: boolean }) {
@@ -55,6 +55,7 @@ export function VersionScopeFields({ v, lists, statusLocked }: { v?: V; lists: {
       <Field label="Flight acres"><input name="flightAcres" className="input" inputMode="decimal" defaultValue={n(v?.flightAcres)} /></Field>
       <Field label="GSD (cm)"><input name="gsdCm" className="input" inputMode="decimal" defaultValue={n(v?.gsdCm)} /></Field>
       <Field label="LiDAR PPSM"><input name="lidarPpsm" className="input" inputMode="decimal" defaultValue={n(v?.lidarPpsm)} /></Field>
+      <Field label="# GCPs / targets"><input name="gcpCount" className="input" inputMode="numeric" defaultValue={n(v?.gcpCount)} /></Field>
       <Toggle name="isLinear" label="Linear project (corridor)" defaultChecked={v?.isLinear}>
         <Field label="Linear miles"><input name="linearMiles" className="input" inputMode="decimal" defaultValue={n(v?.linearMiles)} /></Field>
         <Field label="Corridor width (ft)"><input name="linearWidthFt" className="input" inputMode="decimal" defaultValue={n(v?.linearWidthFt)} /></Field>

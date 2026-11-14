@@ -24,14 +24,15 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       <div className="card overflow-x-auto">
         {rows.length === 0 ? <Empty>No contacts.</Empty> : (
           <table className="table">
-            <thead><tr><th>Name</th><th>Company</th><th>Title</th><th>Email</th><th>Phone</th><th className="text-right">Proposals</th></tr></thead>
+            <thead><tr><th>Contact name</th><th>Company</th><th>Title</th><th>Email</th><th>Phone</th><th>Location</th><th className="text-right">Proposals</th></tr></thead>
             <tbody>{rows.map((c) => (
               <tr key={c.id} className={c.active ? "" : "opacity-50"}>
-                <td className="whitespace-nowrap">{c.firstName} {c.lastName}{!c.active && " (inactive)"}</td>
-                <td><Link className="link" href={`/companies/${c.companyId}`}>{c.company.shortName ?? c.company.name}</Link></td>
+                <td className="whitespace-nowrap"><Link className="link font-medium" href={`/companies/${c.companyId}`}>{c.firstName} {c.lastName}</Link>{!c.active && " (inactive)"}</td>
+                <td>{c.company.shortName ?? c.company.name}</td>
                 <td>{c.title}</td>
                 <td>{c.email ? <a className="link" href={`mailto:${c.email}`}>{c.email}</a> : "—"}</td>
                 <td className="whitespace-nowrap">{c.phone}</td>
+                <td className="whitespace-nowrap">{c.location}</td>
                 <td className="text-right">{c._count.proposals}</td>
               </tr>
             ))}</tbody>

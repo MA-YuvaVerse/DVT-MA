@@ -14,15 +14,24 @@ const DEFAULT_LISTS: Record<string, string[]> = {
   SENSOR_TYPE: ["Image", "LiDAR", "Image + LiDAR", "Drone Image", "Drone LiDAR", "Drone Image + LiDAR", "Mobile LiDAR", "Bathy", "Terrestrial Scan", "Other"],
   DELIVERABLE: ["AT/Plan/Topo", "AT only", "Topo only", "Plan only", "Plan + Topo", "2D Plan", "3D Plan", "Orthos", "Stockpile Volumes", "Tree Heights", "Flight Only", "PLSCADD", "Ground Classification", "Topo-Bathy", "Other"],
   VENDOR_TYPE: ["Manned", "Drone", "Mobile", "Scanning", "Processing"],
-  DOC_FOLDER: ["Proposals", "Contracts", "Project Limits", "Control", "Vendor Quotes", "Correspondence", "Deliverables", "Invoices", "Other"],
+  DOC_FOLDER: ["a. Proposal", "b. Work Order - Project Specs", "c. Project Limits", "d. Ground Control", "e. Image Acquisition", "f. Processing", "g. QA - QC", "h. Client Deliveries", "i. Contracts", "j. Invoices", "k. FAA and Airspace", "l. Client Data"],
   PID_TARGETS: ["PID", "Targets", "NA"],
 };
 
+// Lists that must match a fixed standard exactly (other values are deactivated)
+const EXACT_LISTS = ["DOC_FOLDER"];
+
 async function seedLists() {
   for (const [list, values] of Object.entries(DEFAULT_LISTS)) {
+    const exact = EXACT_LISTS.includes(list);
     for (const [i, value] of values.entries()) {
-      await prisma.listItem.upsert({ where: { list_value: { list, value } }, create: { list, value, sortOrder: i + 1 }, update: {} });
+      await prisma.listItem.upsert({
+        where: { list_value: { list, value } },
+        create: { list, value, sortOrder: i + 1 },
+        update: exact ? { sortOrder: i + 1, active: true } : {},
+      });
     }
+    if (exact) await prisma.listItem.updateMany({ where: { list, value: { notIn: values } }, data: { active: false } });
   }
 }
 
@@ -87,6 +96,7 @@ async function seedDemo(adminId: string) {
     include: { versions: true },
   });
   const [v11, v12] = p1.versions;
+  await prisma.proposal.update({ where: { id: p1.id }, data: { currentVersionId: v11.id } });
   await prisma.acquisitionQuote.createMany({ data: [
     { versionId: v11.id, vendorId: skyhigh.id, sensorId: s1.id, cost: 14800, frameCount: 320, status: "Received", isSelected: true, quoteDate: day(`${y}-01-15`) },
     { versionId: v11.id, vendorId: falcon.id, sensorId: s2.id, cost: 16250, frameCount: 300, status: "Received", quoteDate: day(`${y}-01-16`) },
@@ -108,6 +118,7 @@ async function seedDemo(adminId: string) {
     },
     include: { versions: true },
   });
+  await prisma.proposal.update({ where: { id: p2.id }, data: { currentVersionId: p2.versions[0].id } });
   await prisma.acquisitionQuote.create({ data: { versionId: p2.versions[0].id, vendorId: falcon.id, sensorId: s2.id, cost: 7400, status: "Received", isSelected: true } });
   await prisma.mappingQuote.create({ data: { versionId: p2.versions[0].id, vendorId: vector.id, cost: 4100, days: 12, status: "Received", isSelected: true } });
   const yymm = `${String(y).slice(2)}02`;

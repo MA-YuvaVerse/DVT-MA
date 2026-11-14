@@ -3,7 +3,7 @@ import { DEFAULT_PROBABILITY, type ProbabilitySettings } from "./calc";
 import { PIPELINE_RULES, type PipelineRule } from "./constants";
 
 export const SETTING_DEFAULTS = {
-  pipelineRule: "MAX",
+  pipelineRule: "CURRENT",
   probPreparing: String(DEFAULT_PROBABILITY.preparing),
   probOpen: String(DEFAULT_PROBABILITY.open),
   probOpenStale: String(DEFAULT_PROBABILITY.openStale),
@@ -34,7 +34,7 @@ export function probabilitySettings(s: Record<SettingKey, string>): ProbabilityS
 }
 
 export function pipelineRule(s: Record<SettingKey, string>): PipelineRule {
-  return (s.pipelineRule in PIPELINE_RULES ? s.pipelineRule : "MAX") as PipelineRule;
+  return (s.pipelineRule in PIPELINE_RULES ? s.pipelineRule : "CURRENT") as PipelineRule;
 }
 
 export async function getPipelineConfig() {

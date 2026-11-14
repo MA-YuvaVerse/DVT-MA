@@ -52,6 +52,7 @@ function versionFields(fd: FormData) {
     linearWidthFt: isLinear ? numOrNull(fd, "linearWidthFt") : null,
     gsdCm: numOrNull(fd, "gsdCm"),
     lidarPpsm: numOrNull(fd, "lidarPpsm"),
+    gcpCount: intOrNull(fd, "gcpCount"),
     projectType: str(fd, "projectType"),
     sensorType: str(fd, "sensorType"),
     deliverables: str(fd, "deliverables"),
@@ -68,7 +69,7 @@ export async function createProposal(_p: ActionResult, fd: FormData): Promise<Ac
     const settings = await getSettings();
     const p = await prisma.$transaction(async (tx) => {
       const number = await nextProposalNumber(tx, settings.proposalYearDigits === "2" ? 2 : 4);
-      return tx.proposal.create({
+      const created = await tx.proposal.create({
         data: {
           ...header,
           number,
@@ -77,7 +78,9 @@ export async function createProposal(_p: ActionResult, fd: FormData): Promise<Ac
             create: { ...v, versionNo: 1, code: versionCode(number, 1), status: status(fd), requestDate: v.requestDate ?? new Date() },
           },
         },
+        include: { versions: true },
       });
+      return tx.proposal.update({ where: { id: created.id }, data: { currentVersionId: created.versions[0].id } });
     });
     id = p.id;
   });
@@ -128,6 +131,7 @@ export async function addVersion(proposalId: string, fromVersionId: string | nul
       linearWidthFt: src?.linearWidthFt,
       gsdCm: src?.gsdCm,
       lidarPpsm: src?.lidarPpsm,
+      gcpCount: src?.gcpCount,
       projectType: src?.projectType,
       sensorType: src?.sensorType,
       deliverables: src?.deliverables,
@@ -139,7 +143,16 @@ export async function addVersion(proposalId: string, fromVersionId: string | nul
         : undefined,
     },
   });
+  // a new revision becomes the current version (drives Current Proposal Value)
+  await prisma.proposal.update({ where: { id: proposalId }, data: { currentVersionId: created.id } });
   redirect(`/proposals/${proposalId}?v=${created.id}`);
+}
+
+export async function setCurrentVersion(versionId: string) {
+  await requireUser();
+  const v = await prisma.proposalVersion.findUniqueOrThrow({ where: { id: versionId } });
+  await prisma.proposal.update({ where: { id: v.proposalId }, data: { currentVersionId: v.id } });
+  revalidatePath(`/proposals/${v.proposalId}`);
 }
 
 export async function updateVersion(versionId: string, _p: ActionResult, fd: FormData) {
@@ -264,6 +277,7 @@ export async function awardVersion(versionId: string, _p: ActionResult, fd: Form
         today: awardDate,
       });
       await tx.proposalVersion.update({ where: { id: v.id }, data: { status: WON_STATUS, statusChangedAt: new Date() } });
+      await tx.proposal.update({ where: { id: p.id }, data: { currentVersionId: v.id } });
       if (othersTo) {
         await tx.proposalVersion.updateMany({
           where: { proposalId: p.id, id: { not: v.id }, status: { in: [...OPEN_STATUSES] } },
@@ -290,6 +304,7 @@ export async function awardVersion(versionId: string, _p: ActionResult, fd: Form
           longitude: p.longitude,
           acres: v.mappingAcres,
           linearMiles: v.linearMiles,
+          gcpCount: v.gcpCount,
           projectType: v.projectType,
           sensorType: v.sensorType,
           deliverables: v.deliverables,

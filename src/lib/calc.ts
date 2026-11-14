@@ -125,16 +125,29 @@ function pick(values: number[], rule: PipelineRule, latestIndex: number): number
   }
 }
 
+/** The current version: the one marked current, else the latest version. */
+export function currentVersion<T extends { versionNo: number }>(versions: T[], currentVersionNo?: number | null): T | undefined {
+  return versions.find((v) => v.versionNo === currentVersionNo) ?? versions.reduce<T | undefined>((b, v) => (!b || v.versionNo > b.versionNo ? v : b), undefined);
+}
+
 /**
- * Pipeline for a proposal. Versions are alternatives for one opportunity, so
- * their values are never added together: one value is chosen by the rule.
+ * Pipeline for a proposal, held at the proposal level. Versions are never added
+ * together. With the CURRENT rule (default) the value is the Current Proposal
+ * Value: the value of the active version, counted only while that version is open.
  */
 export function proposalPipeline(
   versions: VersionLike[],
-  rule: PipelineRule = "MAX",
+  rule: PipelineRule = "CURRENT",
   s: ProbabilitySettings = DEFAULT_PROBABILITY,
   today = new Date(),
+  currentVersionNo?: number | null,
 ) {
+  if (rule === "CURRENT") {
+    const cur = currentVersion(versions, currentVersionNo);
+    if (!cur || !isOpen(cur.status) || cur.proposalValue == null) return { value: 0, weighted: 0, probability: 0, openVersions: versions.filter((v) => isOpen(v.status)).length };
+    const prob = versionProbability(cur, s, today);
+    return { value: n(cur.proposalValue), weighted: n(cur.proposalValue) * (prob / 100), probability: prob, openVersions: versions.filter((v) => isOpen(v.status)).length };
+  }
   const open = versions.filter((v) => isOpen(v.status) && v.proposalValue != null);
   if (open.length === 0) return { value: 0, weighted: 0, probability: 0, openVersions: 0 };
   const latestIdx = open.reduce((best, v, i) => (v.versionNo > open[best].versionNo ? i : best), 0);
@@ -173,10 +186,9 @@ export function wonValue(versions: VersionLike[]) {
   return versions.filter((v) => v.status === WON_STATUS).reduce((s, v) => s + n(v.proposalValue), 0);
 }
 
-/** Value proposed, counted once per proposal (highest version). */
-export function proposedValue(versions: VersionLike[]) {
-  const vals = versions.map((v) => n(v.proposalValue));
-  return vals.length ? Math.max(...vals) : 0;
+/** Value proposed, counted once per proposal: the current version's value. */
+export function proposedValue(versions: VersionLike[], currentVersionNo?: number | null) {
+  return n(currentVersion(versions, currentVersionNo)?.proposalValue);
 }
 
 export function projectMargin(p: { contractValue: Num; billedAmount?: Num; acqCost: Num; processingCost: Num; mobCosts: Num }) {

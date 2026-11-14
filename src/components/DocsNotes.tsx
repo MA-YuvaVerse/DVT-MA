@@ -41,9 +41,13 @@ export async function Documents({ target }: { target: Target }) {
           <label className="label">Files</label>
           <input type="file" name="files" multiple className="input" />
         </div>
-        <div className="sm:col-span-2">
+        <div>
           <label className="label">…or a link (Google Drive, etc.)</label>
           <input name="externalUrl" type="url" className="input" placeholder="https://drive.google.com/…" />
+        </div>
+        <div>
+          <label className="label">Document name (for a link)</label>
+          <input name="linkName" className="input" placeholder="e.g. Signed work order" />
         </div>
         <div className="sm:col-span-2"><Submit pendingText="Uploading…">Upload</Submit></div>
       </ActionForm>

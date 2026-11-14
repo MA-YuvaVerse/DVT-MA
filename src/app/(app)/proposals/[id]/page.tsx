@@ -2,11 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { summaryInclude, plainVersion, proposalDisplayName } from "@/lib/proposals";
+import { currentVersionNo, summaryInclude, plainVersion, proposalDisplayName } from "@/lib/proposals";
 import { clientOptions, contactOptions, listValues, projectOptions, sensorOptions, userOptions, vendorOptions } from "@/lib/lookups";
 import { proposalPipeline, proposalStatus, versionCosting, versionProbability } from "@/lib/calc";
 import { getPipelineConfig } from "@/lib/settings";
-import { ACQUISITION_METHODS, OPEN_STATUSES, PIPELINE_RULES } from "@/lib/constants";
+import { ACQUISITION_METHODS, PIPELINE_RULES } from "@/lib/constants";
 import { cityState, date, money, num, pct, toNum } from "@/lib/format";
 import { Card, Kpi, LinkTabs, PageHeader, StatusBadge } from "@/components/ui";
 import { ActionForm, Submit } from "@/components/client";
@@ -14,7 +14,7 @@ import { ProposalHeaderFields, VersionScopeFields } from "@/components/ProposalF
 import { Documents, Notes } from "@/components/DocsNotes";
 import { AcqQuoteRow, MappingQuoteRow } from "./QuoteRows";
 import {
-  addVersion, awardVersion, deleteProposal, deleteVersion, updateInternalCost, updateProposal, updateVersion,
+  addVersion, awardVersion, deleteProposal, deleteVersion, setCurrentVersion, updateInternalCost, updateProposal, updateVersion,
 } from "../actions";
 
 type SP = { v?: string; tab?: string };
@@ -30,10 +30,15 @@ export default async function ProposalPage({ params, searchParams }: { params: P
     prisma.project.findMany({ where: { proposalId: id }, select: { id: true, number: true, versionId: true, status: true } }),
   ]);
 
-  const v = p.versions.find((x) => x.id === sp.v) ?? p.versions[p.versions.length - 1];
+  const curNo = currentVersionNo(p);
+  const cur = p.versions.find((x) => x.versionNo === curNo) ?? p.versions[p.versions.length - 1];
+  const v = p.versions.find((x) => x.id === sp.v) ?? cur;
   const tab = sp.tab ?? "scope";
   const base = `/proposals/${p.id}?v=${v.id}`;
-  const pipe = proposalPipeline(p.versions.map(plainVersion), cfg.rule, cfg.prob);
+  const pipe = proposalPipeline(p.versions.map(plainVersion), cfg.rule, cfg.prob, new Date(), curNo);
+  const nextFollowUp = p.versions.map((x) => x.followUpDate).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime())[0];
+  const requested = p.versions.map((x) => x.requestDate).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime())[0];
+  const clientPm = p.clientContact ? `${p.clientContact.firstName} ${p.clientContact.lastName}`.trim() : null;
   const costing = versionCosting(plainVersion(v));
   const vProject = versionProjects.find((x) => x.versionId === v.id);
   const status = proposalStatus(p.versions);
@@ -55,6 +60,10 @@ export default async function ProposalPage({ params, searchParams }: { params: P
               <Link key={x.id} className="link" href={`/projects/${x.id}`}>Project {x.number}</Link>
             ))}
             <span className="text-xs text-slate-400">{proposalDisplayName(p)}</span>
+            <span className="w-full text-xs text-slate-600">
+              Requested {date(requested)} · {money(cur.proposalValue)} · {cityState(p.city, p.state) || "no location"} ·{" "}
+              {cur.isLinear ? `${num(cur.linearMiles, 1)} mi` : `${num(cur.mappingAcres)} ac`} · Client PM {clientPm ?? "—"} · DVT PM {p.dvtPm?.initials ?? "—"}
+            </span>
           </span>
         }
         actions={user.role === "ADMIN" && versionProjects.length === 0 ? (
@@ -63,13 +72,27 @@ export default async function ProposalPage({ params, searchParams }: { params: P
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Pipeline value" value={money(pipe.value)} sub={`${PIPELINE_RULES[cfg.rule]} · counted once`} />
+        <Kpi label={`Current proposal value (${cur.code})`} value={money(cur.proposalValue)} sub={`pipeline ${money(pipe.value)} · ${PIPELINE_RULES[cfg.rule].replace(" (recommended)", "").toLowerCase()}`} />
         <Kpi label="Weighted pipeline" value={money(pipe.weighted)} sub={`${pipe.probability.toFixed(0)}% probability`} />
         <Kpi label={`Version ${v.code} margin`} value={money(costing.margin)} sub={pct(costing.marginPct)} />
-        <Kpi label="Versions" value={p.versions.length} sub={`${p.versions.filter((x) => (OPEN_STATUSES as readonly string[]).includes(x.status)).length} open`} />
+        <Kpi label="Next follow-up" value={date(nextFollowUp)} sub={`${p.versions.length} version${p.versions.length > 1 ? "s" : ""}`} />
       </div>
 
-      <Card title="Proposal" className="mb-4">
+      <nav className="sticky top-0 z-10 -mx-1 mb-4 flex gap-1 overflow-x-auto rounded-md border border-slate-200 bg-white/95 p-1 text-sm backdrop-blur">
+        {[
+          ["Proposal", "#proposal"],
+          ["Project specs", `${base}&tab=scope#versions`],
+          ["Acquisition vendors", `${base}&tab=acq#versions`],
+          ["Mapping vendors", `${base}&tab=map#versions`],
+          ["Costing", `${base}&tab=cost#versions`],
+          ["Notes", "#notes"],
+          ["Docs", "#docs"],
+        ].map(([label, href]) => (
+          <a key={label} href={href} className="rounded px-2.5 py-1 whitespace-nowrap text-slate-700 hover:bg-brand-50 hover:text-brand-700">{label}</a>
+        ))}
+      </nav>
+
+      <div id="proposal" className="scroll-mt-14" /><Card title="Proposal" className="mb-4">
         <ActionForm action={updateProposal.bind(null, p.id)}>
           <ProposalHeaderFields p={p} clients={clients} contacts={contacts} users={users} projects={projects.filter((x) => !versionProjects.some((vp) => vp.id === x.value))} />
           <div className="mt-3 flex items-center gap-3">
@@ -79,6 +102,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
         </ActionForm>
       </Card>
 
+      <div id="versions" className="scroll-mt-14" />
       <Card
         className="mb-4"
         title="Versions / scope options"
@@ -96,7 +120,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
             return (
               <Link key={x.id} href={`/proposals/${p.id}?v=${x.id}&tab=${tab}`} scroll={false}
                 className={`min-w-[150px] rounded-md border px-2.5 py-1.5 text-left text-xs ${x.id === v.id ? "border-brand-500 bg-brand-50" : "border-slate-200 hover:bg-slate-50"}`}>
-                <div className="flex items-center justify-between gap-2"><span className="font-semibold">.{x.versionNo}</span><StatusBadge status={x.status} /></div>
+                <div className="flex items-center justify-between gap-2"><span className="font-semibold">.{x.versionNo}{x.id === cur.id && <span className="ml-1 rounded bg-brand-600 px-1 text-[10px] text-white">CURRENT</span>}</span><StatusBadge status={x.status} /></div>
                 <div className="truncate text-slate-700" title={x.title}>{x.title}</div>
                 <div className="text-slate-500 tabular-nums">{money(c.value)} · margin {pct(c.marginPct)}</div>
               </Link>
@@ -124,6 +148,12 @@ export default async function ProposalPage({ params, searchParams }: { params: P
                 <Submit>Save version {v.code}</Submit>
               </div>
             </ActionForm>
+          )}
+          {tab === "scope" && v.id !== cur.id && (
+            <form action={setCurrentVersion.bind(null, v.id)} className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+              <Submit className="btn-secondary btn-sm" pendingText="…">Make {v.code} the current version</Submit>
+              <span>The current version sets the Current Proposal Value and the pipeline.</span>
+            </form>
           )}
 
           {tab === "acq" && (
@@ -229,8 +259,8 @@ export default async function ProposalPage({ params, searchParams }: { params: P
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Notes target={{ proposalId: p.id }} contacts={companyContacts} />
-        <Documents target={{ proposalId: p.id }} />
+        <div id="notes" className="scroll-mt-14"><Notes target={{ proposalId: p.id }} contacts={companyContacts} /></div>
+        <div id="docs" className="scroll-mt-14"><Documents target={{ proposalId: p.id }} /></div>
       </div>
     </>
   );

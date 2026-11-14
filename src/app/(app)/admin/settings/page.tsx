@@ -28,7 +28,7 @@ export default async function SettingsPage() {
             <Field label="Proposal number year prefix" hint="4 → 202600362, 2 → 2600362">
               <Select name="proposalYearDigits" options={[{ value: "4", label: "4 digits (YYYY#####)" }, { value: "2", label: "2 digits (YY#####)" }]} value={s.proposalYearDigits} />
             </Field>
-            <Field label="Project number infix" hint="YYMM + infix + ## + method, e.g. 2607 18 04 P"><input name="projectNumberInfix" className="input" defaultValue={s.projectNumberInfix} /></Field>
+            <Field label="Project number infix" hint="Normally 18 (fixed placeholder). Format: YYMM + 18 + ## + method, e.g. 2607 18 04 P"><input name="projectNumberInfix" className="input" defaultValue={s.projectNumberInfix} /></Field>
             <Field label="Company name"><input name="companyName" className="input" defaultValue={s.companyName} /></Field>
           </div>
         </Card>

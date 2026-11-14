@@ -51,17 +51,17 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             </div>
             <table className="table">
               <thead>
-                <tr><th>Project #</th><th>Client</th><th>Project</th><th>PM</th><th>Acq vendor</th><th>Mapping sub</th><th>Flown</th><th>Sent to sub</th><th>Client due</th><th className="text-right">Value</th><th className="text-right">Margin</th><th>Comments</th></tr>
+                <tr><th>Project #</th><th>Client</th><th>Project</th><th>PM</th><th>Acq vendor</th><th>Mapping sub</th><th>Flown</th><th>Sent to sub</th><th>Client due</th><th className="text-right">Value</th><th className="text-right">Margin</th></tr>
               </thead>
-              <tbody>
-                {g.rows.map((r) => {
+              {g.rows.map((r) => {
                   const m = projectMargin({ contractValue: toNum(r.contractValue), billedAmount: toNum(r.billedAmount), acqCost: toNum(r.acqCost), processingCost: toNum(r.processingCost), mobCosts: toNum(r.mobCosts) });
                   const late = r.scheduledClientDelivery && !r.actualClientDelivery && r.scheduledClientDelivery < new Date();
                   return (
-                    <tr key={r.id}>
+                    <tbody key={r.id} className="border-b border-slate-200 [&_td]:border-0">
+                    <tr>
                       <td className="whitespace-nowrap"><Link className="link font-medium" href={`/projects/${r.id}`}>{r.number}</Link></td>
-                      <td className="whitespace-nowrap">{r.company.shortName ?? r.company.name}</td>
-                      <td className="max-w-[220px] truncate" title={r.name}>{r.name}</td>
+                      <td className="max-w-[140px] truncate">{r.company.shortName ?? r.company.name}</td>
+                      <td className="max-w-[170px] truncate" title={r.name}>{r.name}</td>
                       <td>{r.dvtPm?.initials ?? "—"}</td>
                       <td className="whitespace-nowrap">{r.acqVendor?.shortName ?? r.acqVendor?.name ?? "—"}</td>
                       <td className="whitespace-nowrap">{r.processingVendor?.shortName ?? r.processingVendor?.name ?? "—"}</td>
@@ -70,11 +70,13 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                       <td className={`whitespace-nowrap ${late ? "font-semibold text-red-600" : ""}`}>{date(r.scheduledClientDelivery)}</td>
                       <td className="text-right tabular-nums">{money(m.value)}</td>
                       <td className="text-right tabular-nums">{pct(m.marginPct)}</td>
-                      <td className="max-w-[260px] truncate text-slate-600" title={r.comments ?? ""}>{r.comments}</td>
                     </tr>
+                    {r.comments && (
+                      <tr><td colSpan={11} className="!pt-0 text-xs text-slate-600"><span className="line-clamp-2" title={r.comments}>{r.comments}</span></td></tr>
+                    )}
+                    </tbody>
                   );
                 })}
-              </tbody>
             </table>
           </section>
         ))}

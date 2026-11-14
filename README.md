@@ -11,13 +11,13 @@ Built with Next.js 15, TypeScript, Postgres (Prisma) and Tailwind.
 | Proposals | **Proposals**: one record per opportunity, numbered automatically (`YYYY#####`). Each proposal has **versions** `.1`, `.2`, `.3`… for revisions, alternative areas and bundles. |
 | Data Acquisition Quotes | **Acquisition quotes** on each version: any number of vendors (no more Vendor 1/2/3), each with sensor, cost, frames and status. Tick *Selected* for the vendor used in costing. |
 | Mapping Quotes | **Mapping quotes** on each version: any number of mapping vendors, with cost, days and $/acre. |
-| Jobs + Projects | **Projects**: created from the won version with one click. Number format `YYMM18##P/D/M` (the infix is a setting); add-ons get `-1`, `-2`. Holds the economics (PO, invoice, costs, margin), status, milestone dates and throughput. |
+| Jobs + Projects | **Projects**: created from the won version with one click. Number format `YYMM18##P/D/M`, where `18` is the standard placeholder; add-ons get `-1`, `-2`. Holds the economics (PO, invoice, costs, margin), status, milestone dates and throughput. |
 | Lookup tabs | **Companies** (one list, typed Client / Prospect / Acquisition vendor / Mapping vendor), **Contacts**, vendor **Sensors** and admin-editable **dropdown lists**. |
 | QUERY / pivot tabs | **Reports**: open by $, by date, by client, high probability, follow-ups, pricing needed, hit rate, project throughput and vendor quote history. All export to CSV. |
 
 ### Key rules
 - **Single opportunity status:** Preparing Proposal, Open, Open/HIGH, DVT Won, Client Lost, Client Won/DVT Lost, On Hold, Abandoned, Cancelled. It replaces the old Odds + Won/Lost pair.
-- **Pipeline counts each proposal once.** When several versions are open, one value is used: the highest by default, or lowest, average, median or latest, set in *Admin → Settings*. Version values are never summed.
+- **Pipeline is held at the proposal level.** Each proposal has a **current version** (marked CURRENT). Its value is the *Current Proposal Value* and drives pipeline while it is open. Version values are never added together. A new version becomes current automatically, the awarded version becomes current on award, and any version can be made current. Other rules (highest, average, etc.) remain available in *Admin → Settings*.
 - **Weighted pipeline** = value × probability: Open 40%, Open/HIGH 75%, and Open older than 45 days 15%. All of these are editable.
 - **Margin** = proposal value − selected acquisition quotes − selected mapping quotes − DVT internal/mob costs. The proposal value is entered by the user, never forced to cost-plus.
 - **Award** marks the version *DVT Won* and creates the project. It copies client, scope, selected vendors and costs, and can close the other open versions.
@@ -25,7 +25,7 @@ Built with Next.js 15, TypeScript, Postgres (Prisma) and Tailwind.
 - **Only admins can delete.** Users mark records inactive instead.
 
 ### Documents
-Files upload into a chosen folder (Proposals, Contracts, Project Limits…) on each proposal or project, or a Google Drive link can be pasted instead. Files are stored on the server's disk (`UPLOAD_DIR`). Storage sits behind one interface (`src/lib/storage.ts`), so a Google Drive provider can be added later without changing the screens.
+Files upload into one of the 12 standard proposal subfolders (a. Proposal, b. Work Order - Project Specs, c. Project Limits, d. Ground Control, e. Image Acquisition, f. Processing, g. QA - QC, h. Client Deliveries, i. Contracts, j. Invoices, k. FAA and Airspace, l. Client Data) on each proposal or project, or a Google Drive link can be pasted instead. Files are stored on the server's disk (`UPLOAD_DIR`). Storage sits behind one interface (`src/lib/storage.ts`), so a Google Drive provider can be added later without changing the screens.
 
 ## Run locally
 

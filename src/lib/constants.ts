@@ -57,6 +57,7 @@ export const US_STATES = [
 ];
 
 export const PIPELINE_RULES = {
+  CURRENT: "Current version (recommended)",
   MAX: "Highest open version",
   MIN: "Lowest open version",
   AVERAGE: "Average of open versions",
