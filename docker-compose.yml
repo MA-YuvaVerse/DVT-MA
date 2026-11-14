@@ -1,3 +1,6 @@
+# Run everything locally:   docker compose up -d --build      -> http://localhost:3000
+# First-time setup (once):   docker compose run --rm tools npm run db:seed
+# Import a workbook:         docker compose run --rm tools npm run import:workbook -- data/<file>.xlsx --reset
 services:
   db:
     image: postgres:16
@@ -9,5 +12,41 @@ services:
       - "5432:5432"
     volumes:
       - dvt_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dvt -d dvt_app"]
+      interval: 3s
+      retries: 20
+
+  app:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://dvt:dvt_dev@db:5432/dvt_app?schema=public
+      UPLOAD_DIR: /app/storage/uploads
+    ports:
+      - "3000:3000"
+    volumes:
+      - dvt_uploads:/app/storage/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # One-off commands (seed, import). Not started by "docker compose up".
+  tools:
+    build:
+      context: .
+      target: build
+    profiles: ["tools"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://dvt:dvt_dev@db:5432/dvt_app?schema=public
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   dvt_pgdata:
+  dvt_uploads:

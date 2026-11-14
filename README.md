@@ -27,7 +27,33 @@ Built with Next.js 15, TypeScript, Postgres (Prisma) and Tailwind.
 ### Documents
 Files upload into one of the 12 standard proposal subfolders (a. Proposal, b. Work Order - Project Specs, c. Project Limits, d. Ground Control, e. Image Acquisition, f. Processing, g. QA - QC, h. Client Deliveries, i. Contracts, j. Invoices, k. FAA and Airspace, l. Client Data) on each proposal or project, or a Google Drive link can be pasted instead. Files are stored on the server's disk (`UPLOAD_DIR`). Storage sits behind one interface (`src/lib/storage.ts`), so a Google Drive provider can be added later without changing the screens.
 
-## Run locally
+## Run on your own computer (no cloud needed)
+
+Install **Docker Desktop** (Windows or Mac), start it, then in a terminal:
+
+```bash
+git clone <this repo> && cd <repo folder>
+git checkout Sub_branch
+cp .env.example .env                                   # Windows PowerShell: copy .env.example .env
+docker compose up -d --build                           # first build takes a few minutes
+docker compose run --rm tools npm run db:seed          # first time only: admin user + dropdown lists
+```
+
+Open **http://localhost:3000** and sign in with `admin@example.com` / `ChangeMe123!`. Change the password under **Account**.
+
+To load the tracking workbook, put the .xlsx in the `data` folder, then:
+
+```bash
+docker compose run --rm tools npm run import:workbook -- data/<file>.xlsx --reset
+```
+
+- Stop: `docker compose down`. Your data is kept.
+- Start again later: `docker compose up -d`.
+- After pulling new code: `docker compose up -d --build`.
+- Others on the same office network can open `http://<your-computer-ip>:3000`.
+- Before real use, set `AUTH_SECRET` in `.env` to a long random string.
+
+## Run for development (without Docker for the app)
 
 Requirements: Node 22 and Postgres 16. Docker can provide Postgres: `docker compose up -d db`.
 
