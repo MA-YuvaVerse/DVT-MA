@@ -213,6 +213,8 @@ export async function saveAcqQuote(versionId: string, quoteId: string | null, _p
       isSelected: bool(fd, "isSelected"),
       comments: str(fd, "comments"),
     };
+    // one final vendor per version: selecting this quote unselects the others
+    if (data.isSelected) await prisma.acquisitionQuote.updateMany({ where: { versionId, ...(quoteId ? { id: { not: quoteId } } : {}) }, data: { isSelected: false } });
     if (quoteId) await prisma.acquisitionQuote.update({ where: { id: quoteId }, data });
     else await prisma.acquisitionQuote.create({ data: { ...data, versionId } });
     revalidatePath(`/proposals/${await proposalIdOfVersion(versionId)}`);
@@ -238,11 +240,32 @@ export async function saveMappingQuote(versionId: string, quoteId: string | null
       isSelected: bool(fd, "isSelected"),
       comments: str(fd, "comments"),
     };
+    if (data.isSelected) await prisma.mappingQuote.updateMany({ where: { versionId, ...(quoteId ? { id: { not: quoteId } } : {}) }, data: { isSelected: false } });
     if (quoteId) await prisma.mappingQuote.update({ where: { id: quoteId }, data });
     else await prisma.mappingQuote.create({ data: { ...data, versionId } });
     revalidatePath(`/proposals/${await proposalIdOfVersion(versionId)}`);
     return { ok: quoteId ? "Quote saved." : "Quote added." };
   });
+}
+
+/** Make a quote the final (selected) vendor for its version. */
+export async function selectQuote(kind: "acq" | "map", quoteId: string) {
+  await requireUser();
+  if (kind === "acq") {
+    const q = await prisma.acquisitionQuote.findUniqueOrThrow({ where: { id: quoteId } });
+    await prisma.$transaction([
+      prisma.acquisitionQuote.updateMany({ where: { versionId: q.versionId }, data: { isSelected: false } }),
+      prisma.acquisitionQuote.update({ where: { id: quoteId }, data: { isSelected: true, status: q.status === "Requested" ? "Received" : q.status } }),
+    ]);
+    revalidatePath(`/proposals/${await proposalIdOfVersion(q.versionId)}`);
+  } else {
+    const q = await prisma.mappingQuote.findUniqueOrThrow({ where: { id: quoteId } });
+    await prisma.$transaction([
+      prisma.mappingQuote.updateMany({ where: { versionId: q.versionId }, data: { isSelected: false } }),
+      prisma.mappingQuote.update({ where: { id: quoteId }, data: { isSelected: true, status: q.status === "Requested" ? "Received" : q.status } }),
+    ]);
+    revalidatePath(`/proposals/${await proposalIdOfVersion(q.versionId)}`);
+  }
 }
 
 export async function deleteMappingQuote(quoteId: string) {

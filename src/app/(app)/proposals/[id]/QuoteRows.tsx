@@ -27,7 +27,7 @@ export function AcqQuoteRow({ versionId, q, vendors, sensors, acres }: { version
             <input name="frameCount" className="input" inputMode="numeric" placeholder="Frames" defaultValue={q?.frameCount ?? ""} />
             <input name="quoteDate" type="date" className="input" defaultValue={dateInput(q?.quoteDate ?? (isNew ? new Date() : null))} />
             <StatusSelect value={q?.status} />
-            <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="isSelected" defaultChecked={q?.isSelected} /> <span className="md:hidden">Selected</span></label>
+            <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="isSelected" defaultChecked={q?.isSelected} /> <span className="md:hidden">Final vendor</span></label>
             <input name="comments" className="input" placeholder="Comments" defaultValue={q?.comments ?? ""} />
             <Submit className={isNew ? "btn-primary btn-sm" : "btn-secondary btn-sm"} pendingText="…">{isNew ? "Add" : "Save"}</Submit>
           </div>
@@ -59,7 +59,7 @@ export function MappingQuoteRow({ versionId, q, vendors, acres }: { versionId: s
             <div className="px-1 text-sm text-slate-600 tabular-nums">{cost != null && acres ? money(cost / acres, true) : "—"}</div>
             <input name="quoteDate" type="date" className="input" defaultValue={dateInput(q?.quoteDate ?? (isNew ? new Date() : null))} />
             <StatusSelect value={q?.status} />
-            <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="isSelected" defaultChecked={q?.isSelected} /> <span className="md:hidden">Selected</span></label>
+            <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="isSelected" defaultChecked={q?.isSelected} /> <span className="md:hidden">Final vendor</span></label>
             <input name="comments" className="input" placeholder="Comments" defaultValue={q?.comments ?? ""} />
             <Submit className={isNew ? "btn-primary btn-sm" : "btn-secondary btn-sm"} pendingText="…">{isNew ? "Add" : "Save"}</Submit>
           </div>
