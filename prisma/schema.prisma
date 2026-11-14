@@ -182,7 +182,7 @@ model ProposalVersion {
   code                  String    @unique // 202600361.1
   legacyId              String? // original sheet ID, e.g. 2600361.0
   title                 String // project name for this version
-  status                String    @default("Preparing Proposal")
+  status                String    @default("New Request")
   statusChangedAt       DateTime  @default(now())
   requestDate           DateTime?
   dueDate               DateTime?

@@ -5,10 +5,13 @@ import { isOpen } from "@/lib/calc";
 import { ACTIVE_PROJECT_STATUSES, PROJECT_STATUSES, WON_STATUS } from "@/lib/constants";
 import { date, money, pct } from "@/lib/format";
 import { Card, Empty, Kpi, PageHeader, StatusBadge } from "@/components/ui";
+import { getSettings } from "@/lib/settings";
 
 export default async function Dashboard() {
   const today = new Date();
   const year = today.getUTCFullYear();
+  const showReports = (await getSettings()).showReportsCosting === "true";
+  const r = (href: string) => (showReports ? href : undefined);
   const [proposals, projects] = await Promise.all([
     loadProposalSummaries(),
     prisma.project.findMany({ where: { status: { in: ACTIVE_PROJECT_STATUSES } }, include: { company: true }, orderBy: { scheduledClientDelivery: "asc" } }),
@@ -28,16 +31,16 @@ export default async function Dashboard() {
       <PageHeader title="Dashboard" subtitle={today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
         actions={<><Link href="/proposals/new" className="btn-primary">New proposal</Link></>} />
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Open pipeline" value={money(open.reduce((s, p) => s + p.pipelineValue, 0))} sub={`${open.length} open proposals`} href="/reports/open-by-value" />
-        <Kpi label="Weighted pipeline" value={money(open.reduce((s, p) => s + p.weightedValue, 0))} sub="value × probability" href="/reports/open-by-value" />
-        <Kpi label={`Won ${year}`} value={money(wonYtd.reduce((s, p) => s + p.wonValue, 0))} sub={`${wonYtd.length} of ${ytd.length} proposals`} href={`/reports/hit-rate?year=${year}`} />
-        <Kpi label={`Hit rate ${year}`} value={pct(decidedYtd.length ? wonYtd.length / decidedYtd.length : null)} sub={`of ${decidedYtd.length} decided`} href={`/reports/hit-rate?year=${year}`} />
+        <Kpi label="Open pipeline" value={money(open.reduce((s, p) => s + p.pipelineValue, 0))} sub={`${open.length} open proposals`} href="/proposals?status=open&sort=value" />
+        <Kpi label="Weighted pipeline" value={money(open.reduce((s, p) => s + p.weightedValue, 0))} sub="value × probability" href="/proposals?status=open&sort=value" />
+        <Kpi label={`Won ${year}`} value={money(wonYtd.reduce((s, p) => s + p.wonValue, 0))} sub={`${wonYtd.length} of ${ytd.length} proposals`} href={r(`/reports/hit-rate?year=${year}`)} />
+        <Kpi label={`Hit rate ${year}`} value={pct(decidedYtd.length ? wonYtd.length / decidedYtd.length : null)} sub={`of ${decidedYtd.length} decided`} href={r(`/reports/hit-rate?year=${year}`)} />
       </div>
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {byStatus.map(({ s, n }) => <Kpi key={s} label={`Projects — ${s}`} value={n} href={`/projects?status=${encodeURIComponent(s)}`} />)}
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card title={`Follow-ups due (${followUps.length})`} actions={<Link className="link text-xs" href="/reports/follow-ups">All</Link>} bodyClass="p-0 overflow-x-auto">
+        <Card title={`Follow-ups due (${followUps.length})`} actions={<Link className="link text-xs" href="/proposals?status=open&sort=followup">All</Link>} bodyClass="p-0 overflow-x-auto">
           {followUps.length === 0 ? <Empty>No follow-ups due this week.</Empty> : (
             <table className="table">
               <thead><tr><th>Due</th><th>Proposal</th><th>Client</th><th>Project</th><th className="text-right">Value</th><th>PM</th></tr></thead>
@@ -66,7 +69,7 @@ export default async function Dashboard() {
             </table>
           )}
         </Card>
-        <Card title={`Pricing needed (${pricing.length})`} actions={<Link className="link text-xs" href="/reports/pricing-needed">All</Link>} bodyClass="p-0 overflow-x-auto">
+        <Card title={`Pricing needed (${pricing.length})`} actions={<Link className="link text-xs" href="/proposals?status=open&sort=date">All</Link>} bodyClass="p-0 overflow-x-auto">
           {pricing.length === 0 ? <Empty>Every open proposal has a value.</Empty> : (
             <table className="table">
               <thead><tr><th>Requested</th><th>Proposal</th><th>Client</th><th>Project</th><th>PM</th></tr></thead>
@@ -76,12 +79,12 @@ export default async function Dashboard() {
             </table>
           )}
         </Card>
-        <Card title="Top open proposals" actions={<Link className="link text-xs" href="/reports/open-by-value">All</Link>} bodyClass="p-0 overflow-x-auto">
+        <Card title="Top open proposals" actions={<Link className="link text-xs" href="/proposals?status=open&sort=value">All</Link>} bodyClass="p-0 overflow-x-auto">
           {open.length === 0 ? <Empty>No open proposals.</Empty> : (
             <table className="table">
               <thead><tr><th>Proposal</th><th>Client</th><th>Project</th><th className="text-right">Value</th></tr></thead>
               <tbody>{[...open].sort((a, b) => b.pipelineValue - a.pipelineValue).slice(0, 10).map((p) => (
-                <tr key={p.id}><td><Link className="link" href={`/proposals/${p.id}`}>{p.number}</Link>{p.status === "Open/HIGH" && <span className="ml-1 text-[10px] font-semibold text-indigo-700">HIGH</span>}</td><td>{p.client}</td><td className="max-w-[200px] truncate">{p.title}</td><td className="text-right whitespace-nowrap">{money(p.pipelineValue)}</td></tr>
+                <tr key={p.id}><td><Link className="link" href={`/proposals/${p.id}`}>{p.number}</Link>{p.status === "High Probability" && <span className="ml-1 text-[10px] font-semibold text-indigo-700">HIGH</span>}</td><td>{p.client}</td><td className="max-w-[200px] truncate">{p.title}</td><td className="text-right whitespace-nowrap">{money(p.pipelineValue)}</td></tr>
               ))}</tbody>
             </table>
           )}

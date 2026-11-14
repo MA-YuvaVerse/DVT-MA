@@ -4,6 +4,8 @@ import { PIPELINE_RULES, type PipelineRule } from "./constants";
 
 export const SETTING_DEFAULTS = {
   pipelineRule: "CURRENT",
+  probRequest: String(DEFAULT_PROBABILITY.request),
+  probQualifying: String(DEFAULT_PROBABILITY.qualifying),
   probPreparing: String(DEFAULT_PROBABILITY.preparing),
   probOpen: String(DEFAULT_PROBABILITY.open),
   probOpenStale: String(DEFAULT_PROBABILITY.openStale),
@@ -13,6 +15,7 @@ export const SETTING_DEFAULTS = {
   proposalYearDigits: "4",
   projectNumberInfix: "18",
   companyName: "DroneView Technologies",
+  showReportsCosting: "false",
 } as const;
 export type SettingKey = keyof typeof SETTING_DEFAULTS;
 
@@ -25,6 +28,8 @@ export async function getSettings(): Promise<Record<SettingKey, string>> {
 
 export function probabilitySettings(s: Record<SettingKey, string>): ProbabilitySettings {
   return {
+    request: Number(s.probRequest),
+    qualifying: Number(s.probQualifying),
     preparing: Number(s.probPreparing),
     open: Number(s.probOpen),
     openStale: Number(s.probOpenStale),

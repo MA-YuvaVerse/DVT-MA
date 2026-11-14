@@ -5,6 +5,7 @@ import { OPEN_STATUSES, VERSION_STATUSES } from "@/lib/constants";
 import { date, money, num } from "@/lib/format";
 import { Empty, PageHeader, StatusBadge } from "@/components/ui";
 import type { Prisma } from "@prisma/client";
+import { getSettings } from "@/lib/settings";
 
 type SP = { q?: string; status?: string; pm?: string; year?: string; sort?: string };
 
@@ -23,7 +24,8 @@ export default async function ProposalsPage({ searchParams }: { searchParams: Pr
   }
   if (sp.pm) where.dvtPmId = sp.pm;
   if (sp.year) where.number = { startsWith: sp.year };
-  const [all, users] = await Promise.all([loadProposalSummaries(where), userOptions()]);
+  const [all, users, settings] = await Promise.all([loadProposalSummaries(where), userOptions(), getSettings()]);
+  const showCosting = settings.showReportsCosting === "true";
   const status = sp.status ?? "open";
   let rows = all.filter((r) => {
     if (status === "all") return true;
@@ -51,10 +53,12 @@ export default async function ProposalsPage({ searchParams }: { searchParams: Pr
       />
       <div className="mb-2 flex flex-wrap gap-1.5 text-sm">
         {[
+          ["New requests", `/proposals?status=${encodeURIComponent("New Request")}&sort=date`],
+          ["Qualifying", "/proposals?status=Qualifying&sort=date"],
           ["Open by $", "/proposals?status=open&sort=value"],
           ["Open by date", "/proposals?status=open&sort=date"],
           ["Open by client", "/proposals?status=open&sort=client"],
-          ["High probability", `/proposals?status=${encodeURIComponent("Open/HIGH")}&sort=value`],
+          ["High probability", `/proposals?status=${encodeURIComponent("High Probability")}&sort=value`],
           ["Follow-ups", "/proposals?status=open&sort=followup"],
           ["All proposals", "/proposals?status=all"],
         ].map(([label, href]) => (
@@ -112,8 +116,8 @@ export default async function ProposalsPage({ searchParams }: { searchParams: Pr
                       <span>{r.currentCode}{r.versionCount > 1 ? ` (${r.versionCount} versions)` : ""}</span>
                       <span>Acq vendor: <b>{r.likelyAcqVendor ?? "—"}</b> {r.likelyAcqCost ? money(r.likelyAcqCost) : ""}</span>
                       <span>Mapping vendor: <b>{r.mappingVendor ?? "—"}</b> {r.mappingCost ? money(r.mappingCost) : ""}</span>
-                      {r.margin != null && <span>Est. margin {money(r.margin)}</span>}
-                      {r.followUpDate && <span>Follow-up <b className={r.followUpDate < new Date() && (r.status === "Open" || r.status === "Open/HIGH" || r.status === "Preparing Proposal") ? "text-red-600" : ""}>{date(r.followUpDate)}</b></span>}
+                      {showCosting && r.margin != null && <span>Est. margin {money(r.margin)}</span>}
+                      {r.followUpDate && <span>Follow-up <b className={r.followUpDate < new Date() && (OPEN_STATUSES as readonly string[]).includes(r.status) ? "text-red-600" : ""}>{date(r.followUpDate)}</b></span>}
                     </span>
                   </td>
                 </tr>

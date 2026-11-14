@@ -3,15 +3,15 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { clientOptions, contactOptions, listValues, userOptions, vendorOptions } from "@/lib/lookups";
-import { PROJECT_STATUSES } from "@/lib/constants";
-import { dayDiff, projectMargin } from "@/lib/calc";
-import { date, dateInput, money, pct, toNum } from "@/lib/format";
+import { ACQUISITION_METHODS, PROJECT_STATUSES, US_STATES } from "@/lib/constants";
+import { getSettings } from "@/lib/settings";
+import { dayDiff } from "@/lib/calc";
+import { date, dateInput, toNum } from "@/lib/format";
 import { Card, Field, Kpi, PageHeader, Select, StatusBadge } from "@/components/ui";
-import { ActionForm, Submit } from "@/components/client";
+import { ActionForm, CompanyContactPicker, Submit } from "@/components/client";
 import { Documents, Notes } from "@/components/DocsNotes";
-import { ProjectDetailFields } from "../ProjectDetailFields";
 import { DURATIONS, MILESTONES } from "../fields";
-import { changeProjectStatus, deleteProject, updateEconomics, updateMilestones, updateProjectDetails } from "../actions";
+import { changeProjectStatus, deleteProject, updateEconomics, updateMilestones, updateProjectExtra, updateProjectKey } from "../actions";
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const [{ id }, user] = await Promise.all([params, requireUser()]);
@@ -29,8 +29,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     clientOptions(), contactOptions(), userOptions(), vendorOptions("acq"), vendorOptions("mapping"),
     listValues("PROJECT_TYPE"), listValues("SENSOR_TYPE"), listValues("DELIVERABLE"), listValues("PID_TARGETS"),
   ]);
-  const m = projectMargin({ contractValue: toNum(p.contractValue), billedAmount: toNum(p.billedAmount), acqCost: toNum(p.acqCost), processingCost: toNum(p.processingCost), mobCosts: toNum(p.mobCosts) });
   const n = (x: unknown) => toNum(x) ?? "";
+  const showCosting = (await getSettings()).showReportsCosting === "true";
   const daysInStatus = dayDiff(p.statusChangedAt, new Date());
 
   return (
@@ -56,14 +56,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Project value" value={money(m.value)} sub={p.billedAmount != null ? `billed ${money(p.billedAmount)}` : undefined} />
-        <Kpi label="Costs" value={money(m.cost)} sub="acquisition + processing + mob" />
-        <Kpi label="Contribution margin" value={money(m.margin)} sub={pct(m.marginPct)} />
+        <Kpi label="Status" value={<span className="text-base">{p.status}</span>} sub={`for ${daysInStatus} days`} />
+        <Kpi label="Awarded" value={date(p.awardDate)} />
+        <Kpi label="Flown" value={date(p.dateFlown)} />
         <Kpi label="Client delivery" value={date(p.actualClientDelivery ?? p.scheduledClientDelivery)} sub={p.actualClientDelivery ? "delivered" : "scheduled"} />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <Card title="Status" className="xl:col-span-1">
+      <div className="mb-4 grid gap-4 xl:grid-cols-3">
+        <Card title="Status">
           <ActionForm action={changeProjectStatus.bind(null, p.id)} className="flex gap-2">
             <Select name="status" options={PROJECT_STATUSES as unknown as string[]} value={p.status} />
             <Submit>Move</Submit>
@@ -82,37 +82,51 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           )}
         </Card>
 
-        <Card title="Economics (job)" className="xl:col-span-2">
-          <ActionForm action={updateEconomics.bind(null, p.id)}>
+        <Card title="Project" className="xl:col-span-2">
+          <ActionForm action={updateProjectKey.bind(null, p.id)}>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Field label="Project name *" className="sm:col-span-2"><input name="name" className="input" required defaultValue={p.name} /></Field>
+              <CompanyContactPicker companies={clients} contacts={contacts} companyId={p.companyId} contactId={p.clientContactId} required />
+              <Field label="DVT PM"><Select name="dvtPmId" options={users} value={p.dvtPmId} /></Field>
+              <Field label="Acquisition method"><Select name="acquisitionMethod" options={Object.keys(ACQUISITION_METHODS)} value={p.acquisitionMethod} /></Field>
               <Field label="Client PO / job #"><input name="clientPoJob" className="input" defaultValue={p.clientPoJob ?? ""} /></Field>
-              <Field label="DVT invoice #(s)"><input name="invoiceNumbers" className="input" defaultValue={p.invoiceNumbers ?? ""} /></Field>
-              <Field label="Project value — to be billed"><input name="contractValue" className="input" inputMode="decimal" defaultValue={n(p.contractValue)} /></Field>
-              <Field label="Billed amount"><input name="billedAmount" className="input" inputMode="decimal" defaultValue={n(p.billedAmount)} /></Field>
-              <Field label="Acquisition vendor"><Select name="acqVendorId" options={acqVendors} value={p.acqVendorId} /></Field>
-              <Field label="Acquisition cost"><input name="acqCost" className="input" inputMode="decimal" defaultValue={n(p.acqCost)} /></Field>
-              <Field label="Processing vendor"><Select name="processingVendorId" options={mapVendors} value={p.processingVendorId} /></Field>
-              <Field label="Processing cost"><input name="processingCost" className="input" inputMode="decimal" defaultValue={n(p.processingCost)} /></Field>
-              <Field label="DVT mob costs"><input name="mobCosts" className="input" inputMode="decimal" defaultValue={n(p.mobCosts)} /></Field>
-              <label className="flex items-center gap-2 pt-5 text-sm"><input type="checkbox" name="invoicePaid" defaultChecked={p.invoicePaid} /> Invoice paid</label>
+              <Field label="Award date"><input type="date" name="awardDate" className="input" defaultValue={dateInput(p.awardDate)} /></Field>
+              <Field label="Date flown"><input type="date" name="dateFlown" className="input" defaultValue={dateInput(p.dateFlown)} /></Field>
+              <Field label="Scheduled client delivery"><input type="date" name="scheduledClientDelivery" className="input" defaultValue={dateInput(p.scheduledClientDelivery)} /></Field>
+              <Field label="Actual client delivery"><input type="date" name="actualClientDelivery" className="input" defaultValue={dateInput(p.actualClientDelivery)} /></Field>
+              <Field label="Project folder link" className="sm:col-span-2"><input name="folderUrl" type="url" className="input" defaultValue={p.folderUrl ?? ""} /></Field>
+              <Field label="Status comments" className="sm:col-span-2 lg:col-span-4"><textarea name="comments" rows={2} className="input" defaultValue={p.comments ?? ""} /></Field>
             </div>
-            <div className="mt-3"><Submit>Save economics</Submit></div>
+            <div className="mt-3 flex items-center gap-3">
+              <Submit>Save project</Submit>
+              {p.folderUrl && <a className="link text-sm" href={p.folderUrl} target="_blank" rel="noreferrer">Open project folder ↗</a>}
+            </div>
           </ActionForm>
         </Card>
       </div>
 
-      <Card title="Project details" className="my-4">
-        <ActionForm action={updateProjectDetails.bind(null, p.id)}>
-          <ProjectDetailFields p={p} clients={clients} contacts={contacts} users={users} lists={{ projectType, sensorType, deliverables, pid }} />
-          <div className="mt-3 flex items-center gap-3">
-            <Submit>Save details</Submit>
-            {p.folderUrl && <a className="link text-sm" href={p.folderUrl} target="_blank" rel="noreferrer">Open project folder ↗</a>}
-          </div>
-        </ActionForm>
-      </Card>
-
-      <div className="mb-4 grid gap-4 xl:grid-cols-3">
-        <Card title="Milestones" className="xl:col-span-2">
+      <details className="mb-4 rounded-lg border border-slate-200 bg-white">
+        <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900">More details — location &amp; scope, all milestone dates{showCosting ? ", economics" : ""}</summary>
+        <div className="space-y-4 border-t border-slate-100 p-3">
+          <Card title="Location & scope">
+            <ActionForm action={updateProjectExtra.bind(null, p.id)}>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Field label="City"><input name="city" className="input" defaultValue={p.city ?? ""} /></Field>
+                <Field label="State"><Select name="state" options={US_STATES} value={p.state} /></Field>
+                <Field label="Latitude"><input name="latitude" className="input" inputMode="decimal" defaultValue={p.latitude ?? ""} /></Field>
+                <Field label="Longitude"><input name="longitude" className="input" inputMode="decimal" defaultValue={p.longitude ?? ""} /></Field>
+                <Field label="Project type"><Select name="projectType" options={projectType} value={p.projectType} /></Field>
+                <Field label="Sensor type"><Select name="sensorType" options={sensorType} value={p.sensorType} /></Field>
+                <Field label="Deliverables"><Select name="deliverables" options={deliverables} value={p.deliverables} /></Field>
+                <Field label="PID or targets"><Select name="pidOrTargets" options={pid} value={p.pidOrTargets} /></Field>
+                <Field label="Acres"><input name="acres" className="input" inputMode="decimal" defaultValue={n(p.acres)} /></Field>
+                <Field label="Linear miles"><input name="linearMiles" className="input" inputMode="decimal" defaultValue={n(p.linearMiles)} /></Field>
+              </div>
+              <div className="mt-3"><Submit>Save details</Submit></div>
+            </ActionForm>
+          </Card>
+          <div className="grid gap-4 xl:grid-cols-3">
+        <Card title="All milestone dates" className="xl:col-span-2">
           <ActionForm action={updateMilestones.bind(null, p.id)}>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {MILESTONES.map(([k, label]) => (
@@ -132,7 +146,27 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             </tbody>
           </table>
         </Card>
-      </div>
+          </div>
+          {showCosting && (
+        <Card title="Economics (job)">
+          <ActionForm action={updateEconomics.bind(null, p.id)}>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Field label="DVT invoice #(s)"><input name="invoiceNumbers" className="input" defaultValue={p.invoiceNumbers ?? ""} /></Field>
+              <Field label="Project value — to be billed"><input name="contractValue" className="input" inputMode="decimal" defaultValue={n(p.contractValue)} /></Field>
+              <Field label="Billed amount"><input name="billedAmount" className="input" inputMode="decimal" defaultValue={n(p.billedAmount)} /></Field>
+              <Field label="Acquisition vendor"><Select name="acqVendorId" options={acqVendors} value={p.acqVendorId} /></Field>
+              <Field label="Acquisition cost"><input name="acqCost" className="input" inputMode="decimal" defaultValue={n(p.acqCost)} /></Field>
+              <Field label="Processing vendor"><Select name="processingVendorId" options={mapVendors} value={p.processingVendorId} /></Field>
+              <Field label="Processing cost"><input name="processingCost" className="input" inputMode="decimal" defaultValue={n(p.processingCost)} /></Field>
+              <Field label="DVT mob costs"><input name="mobCosts" className="input" inputMode="decimal" defaultValue={n(p.mobCosts)} /></Field>
+              <label className="flex items-center gap-2 pt-5 text-sm"><input type="checkbox" name="invoicePaid" defaultChecked={p.invoicePaid} /> Invoice paid</label>
+            </div>
+            <div className="mt-3"><Submit>Save economics</Submit></div>
+          </ActionForm>
+        </Card>
+          )}
+        </div>
+      </details>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Notes target={{ projectId: p.id }} contacts={contacts.filter((c) => c.group === p.companyId)} />

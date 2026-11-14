@@ -1,8 +1,10 @@
 /** Single opportunity status (replaces the old Odds + Won/Lost pair). */
 export const VERSION_STATUSES = [
+  "New Request",
+  "Qualifying",
   "Preparing Proposal",
-  "Open",
-  "Open/HIGH",
+  "Proposal Sent",
+  "High Probability",
   "DVT Won",
   "Client Lost",
   "Client Won/DVT Lost",
@@ -11,7 +13,10 @@ export const VERSION_STATUSES = [
   "Cancelled",
 ] as const;
 
-export const OPEN_STATUSES = ["Preparing Proposal", "Open", "Open/HIGH"] as const;
+export const OPEN_STATUSES = ["New Request", "Qualifying", "Preparing Proposal", "Proposal Sent", "High Probability"] as const;
+/** The main path a proposal moves along (closed outcomes are separate). */
+export const PIPELINE_STAGES = ["New Request", "Qualifying", "Preparing Proposal", "Proposal Sent", "High Probability", "DVT Won"] as const;
+export const CLOSED_STATUSES = ["Client Lost", "Client Won/DVT Lost", "On Hold", "Abandoned", "Cancelled"] as const;
 export const WON_STATUS = "DVT Won";
 
 export const PROJECT_STATUSES = [

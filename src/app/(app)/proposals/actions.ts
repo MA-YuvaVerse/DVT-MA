@@ -38,7 +38,7 @@ function status(fd: FormData) {
 
 function versionFields(fd: FormData) {
   const isLinear = bool(fd, "isLinear");
-  return {
+  const all = {
     title: reqStr(fd, "title", "Project name"),
     requestDate: dateOrNull(fd, "requestDate"),
     dueDate: dateOrNull(fd, "dueDate"),
@@ -58,6 +58,15 @@ function versionFields(fd: FormData) {
     deliverables: str(fd, "deliverables"),
     comments: str(fd, "versionComments"),
   };
+  // forms only show some fields: keep values of fields that were not on the form
+  const formKey: Record<string, string> = { comments: "versionComments" };
+  const out: Partial<typeof all> = {};
+  const linear = ["isLinear", "linearMiles", "linearWidthFt"];
+  for (const k of Object.keys(all) as (keyof typeof all)[]) {
+    const shown = linear.includes(k) ? fd.has("isLinearShown") : k === "title" || fd.has(formKey[k] ?? k);
+    if (shown) (out as Record<string, unknown>)[k] = all[k];
+  }
+  return out as typeof all;
 }
 
 export async function createProposal(_p: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -75,7 +84,7 @@ export async function createProposal(_p: ActionResult, fd: FormData): Promise<Ac
           number,
           createdById: user.id,
           versions: {
-            create: { ...v, versionNo: 1, code: versionCode(number, 1), status: status(fd), requestDate: v.requestDate ?? new Date() },
+            create: { ...v, title: v.title, versionNo: 1, code: versionCode(number, 1), status: fd.has("status") ? status(fd) : "New Request", requestDate: v.requestDate ?? new Date() },
           },
         },
         include: { versions: true },
@@ -170,6 +179,14 @@ export async function updateVersion(versionId: string, _p: ActionResult, fd: For
   });
 }
 
+/** Move a version to another stage (winning goes through the Award step). */
+export async function setVersionStatus(versionId: string, to: string) {
+  await requireUser();
+  if (!(VERSION_STATUSES as readonly string[]).includes(to) || to === WON_STATUS) throw new Error("Use Award to mark a version as won.");
+  const v = await prisma.proposalVersion.update({ where: { id: versionId }, data: { status: to, statusChangedAt: new Date() } });
+  revalidatePath(`/proposals/${v.proposalId}`);
+}
+
 export async function updateInternalCost(versionId: string, _p: ActionResult, fd: FormData) {
   await requireUser();
   return run(async () => {
@@ -207,8 +224,8 @@ export async function saveAcqQuote(versionId: string, quoteId: string | null, _p
       vendorId: reqStr(fd, "vendorId", "Vendor"),
       sensorId: str(fd, "sensorId"),
       cost: numOrNull(fd, "cost"),
-      frameCount: intOrNull(fd, "frameCount"),
-      quoteDate: dateOrNull(fd, "quoteDate"),
+      ...(fd.has("frameCount") ? { frameCount: intOrNull(fd, "frameCount") } : {}),
+      ...(fd.has("quoteDate") ? { quoteDate: dateOrNull(fd, "quoteDate") } : quoteId ? {} : { quoteDate: new Date() }),
       status: quoteStatus(fd),
       isSelected: bool(fd, "isSelected"),
       comments: str(fd, "comments"),
@@ -235,7 +252,7 @@ export async function saveMappingQuote(versionId: string, quoteId: string | null
       vendorId: reqStr(fd, "vendorId", "Vendor"),
       cost: numOrNull(fd, "cost"),
       days: intOrNull(fd, "days"),
-      quoteDate: dateOrNull(fd, "quoteDate"),
+      ...(fd.has("quoteDate") ? { quoteDate: dateOrNull(fd, "quoteDate") } : quoteId ? {} : { quoteDate: new Date() }),
       status: quoteStatus(fd),
       isSelected: bool(fd, "isSelected"),
       comments: str(fd, "comments"),

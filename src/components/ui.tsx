@@ -29,9 +29,11 @@ export function Card({ title, actions, children, className = "", bodyClass = "p-
 }
 
 const STATUS_COLORS: Record<string, string> = {
+  "New Request": "bg-sky-50 text-sky-700",
+  Qualifying: "bg-cyan-50 text-cyan-800",
   "Preparing Proposal": "bg-slate-100 text-slate-700",
-  Open: "bg-blue-50 text-blue-700",
-  "Open/HIGH": "bg-indigo-100 text-indigo-800",
+  "Proposal Sent": "bg-blue-50 text-blue-700",
+  "High Probability": "bg-indigo-100 text-indigo-800",
   "DVT Won": "bg-emerald-100 text-emerald-800",
   "Client Lost": "bg-amber-50 text-amber-800",
   "Client Won/DVT Lost": "bg-red-50 text-red-700",

@@ -97,6 +97,7 @@ export function Toggle({ name, label, defaultChecked, children }: { name: string
   return (
     <>
       <label className="flex items-center gap-2 pt-5 text-sm">
+        <input type="hidden" name={`${name}Shown`} value="1" />
         <input type="checkbox" name={name} checked={on} onChange={(e) => setOn(e.target.checked)} /> {label}
       </label>
       {on && children}

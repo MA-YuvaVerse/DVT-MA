@@ -88,8 +88,8 @@ async function seedDemo(adminId: string) {
       number: num(1), companyId: northwind.id, clientContactId: nwPm.id, dvtPmId: pmA.id, city: "Ypsilanti", state: "MI", createdById: adminId,
       versions: {
         create: [
-          { versionNo: 1, code: `${num(1)}.1`, title: "Riverbend Solar - Full site", status: "Open/HIGH", requestDate: day(`${y}-01-12`), followUpDate: new Date(), proposalValue: 48500, internalCost: 1500, mappingAcres: 1850, flightAcres: 2100, gsdCm: 5, lidarPpsm: 20, projectType: "Solar", sensorType: "Image + LiDAR", deliverables: "AT/Plan/Topo" },
-          { versionNo: 2, code: `${num(1)}.2`, title: "Riverbend Solar - Phase 1 only", status: "Open", requestDate: day(`${y}-01-12`), proposalValue: 31200, internalCost: 1200, mappingAcres: 980, flightAcres: 1100, gsdCm: 5, lidarPpsm: 20, projectType: "Solar", sensorType: "Image + LiDAR", deliverables: "AT/Plan/Topo" },
+          { versionNo: 1, code: `${num(1)}.1`, title: "Riverbend Solar - Full site", status: "High Probability", requestDate: day(`${y}-01-12`), followUpDate: new Date(), proposalValue: 48500, internalCost: 1500, mappingAcres: 1850, flightAcres: 2100, gsdCm: 5, lidarPpsm: 20, projectType: "Solar", sensorType: "Image + LiDAR", deliverables: "AT/Plan/Topo" },
+          { versionNo: 2, code: `${num(1)}.2`, title: "Riverbend Solar - Phase 1 only", status: "Proposal Sent", requestDate: day(`${y}-01-12`), proposalValue: 31200, internalCost: 1200, mappingAcres: 980, flightAcres: 1100, gsdCm: 5, lidarPpsm: 20, projectType: "Solar", sensorType: "Image + LiDAR", deliverables: "AT/Plan/Topo" },
         ],
       },
     },

@@ -74,13 +74,14 @@ export async function saveSettings(_p: ActionResult, fd: FormData) {
   return run(async () => {
     const rule = reqStr(fd, "pipelineRule");
     if (!(rule in PIPELINE_RULES)) throw new Error("Unknown pipeline rule.");
-    const pctKeys: SettingKey[] = ["probPreparing", "probOpen", "probOpenStale", "probHigh"];
+    const pctKeys: SettingKey[] = ["probRequest", "probQualifying", "probPreparing", "probOpen", "probOpenStale", "probHigh"];
     for (const k of pctKeys) {
       const v = Number(reqStr(fd, k));
       if (!(v >= 0 && v <= 100)) throw new Error("Probabilities must be between 0 and 100.");
     }
     const infix = reqStr(fd, "projectNumberInfix");
     if (!/^\d{0,4}$/.test(infix)) throw new Error("Project number infix must be up to 4 digits.");
+    fd.set("showReportsCosting", bool(fd, "showReportsCosting") ? "true" : "false");
     for (const k of Object.keys(SETTING_DEFAULTS) as SettingKey[]) {
       const v = str(fd, k);
       if (v != null) await prisma.setting.upsert({ where: { key: k }, create: { key: k, value: v }, update: { value: v } });

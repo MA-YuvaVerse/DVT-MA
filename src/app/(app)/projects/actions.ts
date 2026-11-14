@@ -41,6 +41,51 @@ export async function updateProjectDetails(id: string, _p: ActionResult, fd: For
   });
 }
 
+/** The everyday project fields: who, what, status dates. */
+export async function updateProjectKey(id: string, _p: ActionResult, fd: FormData) {
+  await requireUser();
+  return run(async () => {
+    await prisma.project.update({
+      where: { id },
+      data: {
+        name: reqStr(fd, "name", "Project name"),
+        companyId: reqStr(fd, "companyId", "Client"),
+        clientContactId: str(fd, "clientContactId"),
+        dvtPmId: str(fd, "dvtPmId"),
+        acquisitionMethod: str(fd, "acquisitionMethod"),
+        clientPoJob: str(fd, "clientPoJob"),
+        folderUrl: str(fd, "folderUrl"),
+        comments: str(fd, "comments"),
+        awardDate: dateOrNull(fd, "awardDate"),
+        dateFlown: dateOrNull(fd, "dateFlown"),
+        scheduledClientDelivery: dateOrNull(fd, "scheduledClientDelivery"),
+        actualClientDelivery: dateOrNull(fd, "actualClientDelivery"),
+      },
+    });
+    revalidatePath(`/projects/${id}`);
+    return { ok: "Project saved." };
+  });
+}
+
+/** Optional project details (location, scope, PID). */
+export async function updateProjectExtra(id: string, _p: ActionResult, fd: FormData) {
+  await requireUser();
+  return run(async () => {
+    await prisma.project.update({
+      where: { id },
+      data: {
+        city: str(fd, "city"), state: str(fd, "state"),
+        latitude: numOrNull(fd, "latitude"), longitude: numOrNull(fd, "longitude"),
+        acres: numOrNull(fd, "acres"), linearMiles: numOrNull(fd, "linearMiles"),
+        projectType: str(fd, "projectType"), sensorType: str(fd, "sensorType"), deliverables: str(fd, "deliverables"),
+        pidOrTargets: str(fd, "pidOrTargets"),
+      },
+    });
+    revalidatePath(`/projects/${id}`);
+    return { ok: "Details saved." };
+  });
+}
+
 export async function updateEconomics(id: string, _p: ActionResult, fd: FormData) {
   await requireUser();
   return run(async () => {
@@ -68,7 +113,7 @@ export async function updateMilestones(id: string, _p: ActionResult, fd: FormDat
   await requireUser();
   return run(async () => {
     const data: Record<string, Date | null> = {};
-    for (const [k] of MILESTONES) data[k] = dateOrNull(fd, k);
+    for (const [k] of MILESTONES) if (fd.has(k)) data[k] = dateOrNull(fd, k);
     await prisma.project.update({ where: { id }, data });
     revalidatePath(`/projects/${id}`);
     return { ok: "Milestones saved." };

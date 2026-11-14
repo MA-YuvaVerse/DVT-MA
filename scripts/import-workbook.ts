@@ -266,7 +266,7 @@ async function main() {
       }
     }
     // current version: the won one, else the latest open one, else the latest
-    const open = ["Preparing Proposal", "Open", "Open/HIGH"];
+    const open = ["New Request", "Qualifying", "Preparing Proposal", "Proposal Sent", "High Probability"];
     const current = made.find((m) => m.status === "DVT Won") ?? [...made].reverse().find((m) => open.includes(m.status)) ?? made[made.length - 1];
     if (current) await prisma.proposal.update({ where: { id: proposal.id }, data: { currentVersionId: current.id } });
   }

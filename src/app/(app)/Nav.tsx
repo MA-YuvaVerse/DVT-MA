@@ -16,7 +16,7 @@ const ADMIN = [
   { href: "/admin/settings", label: "Settings" },
 ];
 
-export function Nav({ isAdmin }: { isAdmin: boolean }) {
+export function Nav({ isAdmin, showReports }: { isAdmin: boolean; showReports: boolean }) {
   const path = usePathname();
   const item = (l: { href: string; label: string }) => {
     const active = l.href === "/" ? path === "/" : path.startsWith(l.href);
@@ -28,7 +28,7 @@ export function Nav({ isAdmin }: { isAdmin: boolean }) {
   };
   return (
     <nav className="flex gap-1 overflow-x-auto px-2 pb-2 md:block md:space-y-0.5 md:pb-0">
-      {MAIN.map(item)}
+      {MAIN.filter((l) => showReports || l.href !== "/reports").map(item)}
       {isAdmin && (
         <>
           <div className="hidden px-3 pt-4 pb-1 text-[11px] font-semibold tracking-wide text-slate-400 uppercase md:block">Admin</div>

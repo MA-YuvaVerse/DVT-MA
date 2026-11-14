@@ -68,7 +68,7 @@ function QuoteList({ kind, v, href }: { kind: "acq" | "map"; v: Version; href: s
 }
 
 /** All versions side by side, with their quotes and the final proposal summary. */
-export function VersionsOverview({ p, currentId, pathBase }: { p: ProposalWithVersions; currentId: string; pathBase: string }) {
+export function VersionsOverview({ p, currentId, pathBase, showCosting = false }: { p: ProposalWithVersions; currentId: string; pathBase: string; showCosting?: boolean }) {
   const accepted = p.versions.filter((v) => v.status === WON_STATUS);
   const acceptedCost = accepted.map((v) => versionCosting(plainVersion(v)));
   const total = acceptedCost.reduce((s, c) => s + (c.value ?? 0), 0);
@@ -81,7 +81,7 @@ export function VersionsOverview({ p, currentId, pathBase }: { p: ProposalWithVe
         {accepted.length === 0 ? (
           <p className="text-slate-600">
             Not decided yet. Current version <b>{cur?.code}</b> ({money(cur?.proposalValue)}) is what counts in the pipeline.
-            When the client accepts a version, award it on its <i>Award</i> tab; versions the client did not choose are marked rejected.
+            When the client accepts a version, use <i>Client accepted — award</i>; versions the client did not choose are marked rejected.
           </p>
         ) : (
           <>
@@ -92,13 +92,13 @@ export function VersionsOverview({ p, currentId, pathBase }: { p: ProposalWithVe
                 return (
                   <li key={v.id}>
                     <b>{v.code}</b> {v.title} — <b>{money(v.proposalValue)}</b>
-                    <div className="text-xs text-slate-600">{scopeLine(v) || "scope not entered"} · acquisition: {acq || "none selected"} · mapping: {map || "none selected"} · margin {pct(acceptedCost[i].marginPct)}</div>
+                    <div className="text-xs text-slate-600">{scopeLine(v) || "scope not entered"} · acquisition: {acq || "none selected"} · mapping: {map || "none selected"}{showCosting ? ` · margin ${pct(acceptedCost[i].marginPct)}` : ""}</div>
                   </li>
                 );
               })}
             </ul>
             <div className="mt-2 border-t border-emerald-200 pt-1 font-semibold">
-              Total accepted {money(total)} · costs {money(totalCost)} · margin {money(totalCost ? total - totalCost : null)} {totalCost ? `(${pct((total - totalCost) / total)})` : ""}
+              Total accepted {money(total)}{showCosting && <> · costs {money(totalCost)} · margin {money(totalCost ? total - totalCost : null)} {totalCost ? `(${pct((total - totalCost) / total)})` : ""}</>}
             </div>
           </>
         )}
@@ -130,10 +130,10 @@ export function VersionsOverview({ p, currentId, pathBase }: { p: ProposalWithVe
                 <QuoteList kind="acq" v={v} href={`${vBase}&tab=acq`} />
                 <QuoteList kind="map" v={v} href={`${vBase}&tab=map`} />
               </div>
-              <div className="mt-2 border-t border-slate-100 pt-1.5 text-xs text-slate-600">
+              {showCosting && <div className="mt-2 border-t border-slate-100 pt-1.5 text-xs text-slate-600">
                 Cost {money(c.totalCost || null)} (acq {money(c.acqCost || null)} + mapping {money(c.mappingCost || null)} + internal {money(c.internalCost || null)}) ·{" "}
                 <b>margin {money(c.margin)} {c.marginPct != null ? `(${pct(c.marginPct)})` : ""}</b>
-              </div>
+              </div>}
             </section>
           );
         })}

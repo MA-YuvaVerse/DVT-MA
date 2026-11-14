@@ -14,6 +14,7 @@ import { ProposalHeaderFields, VersionScopeFields } from "@/components/ProposalF
 import { Documents, Notes } from "@/components/DocsNotes";
 import { AcqQuoteRow, MappingQuoteRow } from "./QuoteRows";
 import { VersionsOverview } from "./VersionsOverview";
+import { StageBar } from "./StageBar";
 import {
   addVersion, awardVersion, deleteProposal, deleteVersion, setCurrentVersion, updateInternalCost, updateProposal, updateVersion,
 } from "../actions";
@@ -41,6 +42,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
   const requested = p.versions.map((x) => x.requestDate).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime())[0];
   const clientPm = p.clientContact ? `${p.clientContact.firstName} ${p.clientContact.lastName}`.trim() : null;
   const costing = versionCosting(plainVersion(v));
+  const showCosting = cfg.settings.showReportsCosting === "true";
   const vProject = versionProjects.find((x) => x.versionId === v.id);
   const status = proposalStatus(p.versions);
   const companyContacts = contacts.filter((c) => c.group === p.companyId);
@@ -74,10 +76,12 @@ export default async function ProposalPage({ params, searchParams }: { params: P
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label={`Current proposal value (${cur.code})`} value={money(cur.proposalValue)} sub={`pipeline ${money(pipe.value)} · ${PIPELINE_RULES[cfg.rule].replace(" (recommended)", "").toLowerCase()}`} />
-        <Kpi label="Weighted pipeline" value={money(pipe.weighted)} sub={`${pipe.probability.toFixed(0)}% probability`} />
-        <Kpi label={`Version ${v.code} margin`} value={money(costing.margin)} sub={pct(costing.marginPct)} />
+        <Kpi label="Stage" value={<span className="text-base">{v.status}</span>} sub={`version ${v.code}`} />
+        {showCosting ? <Kpi label={`Version ${v.code} margin`} value={money(costing.margin)} sub={pct(costing.marginPct)} /> : <Kpi label="Weighted pipeline" value={money(pipe.weighted)} sub={`${pipe.probability.toFixed(0)}% probability`} />}
         <Kpi label="Next follow-up" value={date(nextFollowUp)} sub={`${p.versions.length} version${p.versions.length > 1 ? "s" : ""}`} />
       </div>
+
+      <StageBar versionId={v.id} code={v.code} status={v.status} awardHref={`${base}&tab=award#versions`} hasProject={!!vProject} />
 
       <nav className="sticky top-0 z-10 -mx-1 mb-4 flex gap-1 overflow-x-auto rounded-md border border-slate-200 bg-white/95 p-1 text-sm backdrop-blur">
         {[
@@ -86,7 +90,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
           ["Project specs", `${base}&tab=scope#versions`],
           ["Acquisition vendors", `${base}&tab=acq#versions`],
           ["Mapping vendors", `${base}&tab=map#versions`],
-          ["Costing", `${base}&tab=cost#versions`],
+          ...(showCosting ? [["Costing", `${base}&tab=cost#versions`]] : []),
           ["Notes", "#notes"],
           ["Docs", "#docs"],
         ].map(([label, href]) => (
@@ -124,7 +128,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
                 className={`min-w-[150px] rounded-md border px-2.5 py-1.5 text-left text-xs ${x.id === v.id ? "border-brand-500 bg-brand-50" : "border-slate-200 hover:bg-slate-50"}`}>
                 <div className="flex items-center justify-between gap-2"><span className="font-semibold">.{x.versionNo}{x.id === cur.id && <span className="ml-1 rounded bg-brand-600 px-1 text-[10px] text-white">CURRENT</span>}</span><StatusBadge status={x.status} /></div>
                 <div className="truncate text-slate-700" title={x.title}>{x.title}</div>
-                <div className="text-slate-500 tabular-nums">{money(c.value)} · margin {pct(c.marginPct)}</div>
+                <div className="text-slate-500 tabular-nums">{money(c.value)}{showCosting ? ` · margin ${pct(c.marginPct)}` : ""}</div>
               </Link>
             );
           })}
@@ -137,7 +141,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
               { key: "scope", label: `.${v.versionNo} Scope & status`, href: `${base}&tab=scope` },
               { key: "acq", label: `.${v.versionNo} Acquisition quotes (${v.acqQuotes.length})`, href: `${base}&tab=acq` },
               { key: "map", label: `.${v.versionNo} Mapping quotes (${v.mappingQuotes.length})`, href: `${base}&tab=map` },
-              { key: "cost", label: `.${v.versionNo} Costing & margin`, href: `${base}&tab=cost` },
+              ...(showCosting ? [{ key: "cost", label: `.${v.versionNo} Costing & margin`, href: `${base}&tab=cost` }] : []),
               { key: "award", label: vProject ? `Project ${vProject.number}` : "Award", href: `${base}&tab=award` },
             ]}
           />
@@ -152,7 +156,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
               <span className="ml-auto text-xs text-slate-500">Switch version using the cards above</span>
             </div>
           )}
-          {tab === "overview" && <VersionsOverview p={p} currentId={cur.id} pathBase={`/proposals/${p.id}`} />}
+          {tab === "overview" && <VersionsOverview p={p} currentId={cur.id} pathBase={`/proposals/${p.id}`} showCosting={showCosting} />}
           {tab === "scope" && (
             <ActionForm action={updateVersion.bind(null, v.id)}>
               <div className="mb-2 text-xs text-slate-500">Version <b>{v.code}</b>{v.legacyId ? ` (sheet ID ${v.legacyId})` : ""} · probability {versionProbability(plainVersion(v), cfg.prob)}% · status since {date(v.statusChangedAt)}</div>
@@ -172,8 +176,8 @@ export default async function ProposalPage({ params, searchParams }: { params: P
           {tab === "acq" && (
             <div className="space-y-2">
               <p className="text-xs text-slate-500">Every acquisition vendor quoted for this version — add as many as you need. Tick <b>Final</b> on the vendor chosen for this version; only the final vendor counts in costing (ticking one unticks the others).</p>
-              <div className="hidden grid-cols-[1.2fr_1.6fr_0.8fr_0.6fr_0.9fr_0.9fr_0.5fr_1.4fr_auto] gap-2 px-1 text-[11px] font-semibold text-slate-500 md:grid">
-                <span>Vendor</span><span>Sensor</span><span>Cost $</span><span>Frames</span><span>Quote date</span><span>Status</span><span>Final</span><span>Comments</span><span />
+              <div className="hidden grid-cols-[1.3fr_1.6fr_0.9fr_0.9fr_0.5fr_1.8fr_auto] gap-2 px-1 text-[11px] font-semibold text-slate-500 md:grid">
+                <span>Vendor</span><span>Sensor</span><span>Cost $</span><span>Status</span><span>Final</span><span>Comments</span><span />
               </div>
               {v.acqQuotes.map((q) => <AcqQuoteRow key={q.id} versionId={v.id} q={q} vendors={acqVendors} sensors={sensors} acres={toNum(v.flightAcres) ?? toNum(v.mappingAcres)} />)}
               <AcqQuoteRow versionId={v.id} vendors={acqVendors} sensors={sensors} acres={null} />
@@ -189,8 +193,8 @@ export default async function ProposalPage({ params, searchParams }: { params: P
           {tab === "map" && (
             <div className="space-y-2">
               <p className="text-xs text-slate-500">Mapping / processing quotes (any number of vendors, including a DVT estimate). Tick <b>Final</b> on the vendor chosen for this version; only it counts in costing.</p>
-              <div className="hidden grid-cols-[1.4fr_0.9fr_0.6fr_0.8fr_0.9fr_0.9fr_0.5fr_1.6fr_auto] gap-2 px-1 text-[11px] font-semibold text-slate-500 md:grid">
-                <span>Vendor</span><span>Cost $</span><span>Days</span><span>$ / acre</span><span>Quote date</span><span>Status</span><span>Final</span><span>Comments</span><span />
+              <div className="hidden grid-cols-[1.5fr_0.9fr_0.6fr_0.9fr_0.5fr_1.8fr_auto] gap-2 px-1 text-[11px] font-semibold text-slate-500 md:grid">
+                <span>Vendor</span><span>Cost $</span><span>Days</span><span>Status</span><span>Final</span><span>Comments</span><span />
               </div>
               {v.mappingQuotes.map((q) => <MappingQuoteRow key={q.id} versionId={v.id} q={q} vendors={mapVendors} acres={toNum(v.mappingAcres)} />)}
               <MappingQuoteRow versionId={v.id} vendors={mapVendors} acres={toNum(v.mappingAcres)} />
@@ -198,7 +202,7 @@ export default async function ProposalPage({ params, searchParams }: { params: P
             </div>
           )}
 
-          {tab === "cost" && (
+          {tab === "cost" && showCosting && (
             <div className="grid gap-4 lg:grid-cols-2">
               <table className="table">
                 <tbody>

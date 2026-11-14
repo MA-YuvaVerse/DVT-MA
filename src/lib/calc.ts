@@ -29,6 +29,8 @@ export interface VersionLike {
 }
 
 export interface ProbabilitySettings {
+  request?: number;
+  qualifying?: number;
   preparing: number;
   open: number;
   openStale: number;
@@ -37,6 +39,8 @@ export interface ProbabilitySettings {
 }
 
 export const DEFAULT_PROBABILITY: ProbabilitySettings = {
+  request: 10,
+  qualifying: 20,
   preparing: 40,
   open: 40,
   openStale: 15,
@@ -91,11 +95,15 @@ export function versionProbability(v: VersionLike, s: ProbabilitySettings = DEFA
   switch (v.status) {
     case WON_STATUS:
       return 100;
-    case "Open/HIGH":
+    case "High Probability":
       return s.high;
+    case "New Request":
+      return s.request ?? 10;
+    case "Qualifying":
+      return s.qualifying ?? 20;
     case "Preparing Proposal":
       return s.preparing;
-    case "Open": {
+    case "Proposal Sent": {
       const since = v.requestDate ?? v.createdAt;
       if (since && daysBetween(since, today) > s.staleDays) return s.openStale;
       return s.open;
@@ -160,9 +168,11 @@ export function proposalPipeline(
 
 const STATUS_PRIORITY = [
   WON_STATUS,
-  "Open/HIGH",
-  "Open",
+  "High Probability",
+  "Proposal Sent",
   "Preparing Proposal",
+  "Qualifying",
+  "New Request",
   "On Hold",
   "Client Won/DVT Lost",
   "Client Lost",

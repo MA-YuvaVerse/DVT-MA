@@ -15,6 +15,15 @@ Built with Next.js 15, TypeScript, Postgres (Prisma) and Tailwind.
 | Lookup tabs | **Companies** (one list, typed Client / Prospect / Acquisition vendor / Mapping vendor), **Contacts**, vendor **Sensors** and admin-editable **dropdown lists**. |
 | QUERY / pivot tabs | **Reports**: open by $, by date, by client, high probability, follow-ups, pricing needed, hit rate, project throughput and vendor quote history. All export to CSV. |
 
+### The everyday flow
+1. **New proposal request:** log the inquiry with client, project name, dates and what's being asked for.
+2. **Stages:** move each version along the stage bar with one click: New Request → Qualifying → Preparing Proposal → Proposal Sent → High Probability. **Close as…** sets Client Lost, Client Won/DVT Lost, On Hold, Abandoned or Cancelled.
+3. **Versions and vendor quotes:** *Compare versions* shows every version side by side with all its acquisition and mapping quotes. **Make final** marks the chosen vendor (one per version).
+4. **Client accepted — award:** marks the version won and creates the project.
+5. **Project:** status and key dates. Location, all 19 milestone dates and economics are under *More details*.
+
+Optional fields that come from the old spreadsheets (lat/long, GSD, PPSM, frames and so on) are kept, under collapsed **More details** sections. **Reports and Costing & margin** stay built but are hidden until an admin turns on *Admin → Settings → Show Reports and Costing*.
+
 ### Key rules
 - **Single opportunity status:** Preparing Proposal, Open, Open/HIGH, DVT Won, Client Lost, Client Won/DVT Lost, On Hold, Abandoned, Cancelled. It replaces the old Odds + Won/Lost pair.
 - **Pipeline is held at the proposal level.** Each proposal has a **current version** (marked CURRENT). Its value is the *Current Proposal Value* and drives pipeline while it is open. Version values are never added together. A new version becomes current automatically, the awarded version becomes current on award, and any version can be made current. Other rules (highest, average, etc.) remain available in *Admin → Settings*.

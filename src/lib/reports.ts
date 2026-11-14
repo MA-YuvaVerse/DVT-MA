@@ -93,9 +93,9 @@ export const REPORTS: ReportDef[] = [
   {
     slug: "high-probability",
     title: "High probability",
-    description: "Proposals marked Open/HIGH.",
+    description: "Proposals marked High Probability.",
     async run() {
-      return proposalReport((await openProposals()).filter((p) => p.status === "Open/HIGH").sort((a, b) => b.pipelineValue - a.pipelineValue));
+      return proposalReport((await openProposals()).filter((p) => p.status === "High Probability").sort((a, b) => b.pipelineValue - a.pipelineValue));
     },
   },
   {

@@ -12,7 +12,7 @@ test("legacy proposal ids", () => {
 
 test("legacy status mapping", () => {
   assert.equal(mapLegacyStatus("Won", "DVT Won"), "DVT Won");
-  assert.equal(mapLegacyStatus("High", null), "Open/HIGH");
+  assert.equal(mapLegacyStatus("High", null), "High Probability");
   assert.equal(mapLegacyStatus("Suspended", null), "On Hold");
   assert.equal(mapLegacyStatus("Abandoned", "Option Not Considered"), "Cancelled");
   assert.equal(mapLegacyStatus("Abandoned", "Client Lost"), "Client Lost");

@@ -29,15 +29,15 @@ export function mapLegacyStatus(odds: string | null, outcome: string | null): st
   const o = (odds ?? "").toLowerCase();
   const r = (outcome ?? "").toLowerCase();
   if (o === "won" || r === "dvt won") return "DVT Won";
-  if (o === "high") return "Open/HIGH";
-  if (o === "open") return "Open";
+  if (o === "high") return "High Probability";
+  if (o === "open") return "Proposal Sent";
   if (o === "suspended") return "On Hold";
   if (r.includes("option not considered")) return "Cancelled";
   if (r.startsWith("client won/dvt lost")) return "Client Won/DVT Lost";
   if (r === "client lost") return "Client Lost";
   if (o === "lost") return "Client Won/DVT Lost";
   if (o === "abandoned") return "Abandoned";
-  return "Open";
+  return "Proposal Sent";
 }
 
 /** "Lake Town MI" -> { city: "Lake Town", state: "MI" } */
