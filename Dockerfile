@@ -7,7 +7,7 @@ RUN npm ci
 
 FROM deps AS build
 COPY . .
-RUN npm run build
+RUN STANDALONE=1 npm run build
 
 FROM node:22 AS run
 WORKDIR /app

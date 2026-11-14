@@ -53,6 +53,24 @@ docker compose run --rm tools npm run import:workbook -- data/<file>.xlsx --rese
 - Others on the same office network can open `http://<your-computer-ip>:3000`.
 - Before real use, set `AUTH_SECRET` in `.env` to a long random string.
 
+## Run on your own computer without Docker
+
+1. Install **Node.js 22 LTS** (nodejs.org) and **PostgreSQL 16**: the postgresql.org installer on Windows, or Postgres.app on Mac. Remember the password you set for the `postgres` user.
+2. In **pgAdmin** (installed with PostgreSQL), create a database named `dvt_app`.
+3. In the project folder, copy `.env.example` to `.env` and change `DATABASE_URL` to
+   `postgresql://postgres:<your-postgres-password>@localhost:5432/dvt_app?schema=public`
+4. Then run:
+
+```bash
+npm install
+npx prisma migrate deploy
+npm run db:seed
+npm run build
+npm start
+```
+
+Open http://localhost:3000. Next time, only `npm start` is needed. Re-run `npm install`, `npx prisma migrate deploy` and `npm run build` after pulling new code.
+
 ## Run for development (without Docker for the app)
 
 Requirements: Node 22 and Postgres 16. Docker can provide Postgres: `docker compose up -d db`.
