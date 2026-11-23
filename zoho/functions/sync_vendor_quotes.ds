@@ -1,0 +1,180 @@
+void automation.sync_vendor_quotes(String versionId)
+{
+	// Mirrors every Acquisition and Mapping quote row on a Scope/Version into the Vendor Quotes module.
+	// Key = subform row id (Subform_Row_ID). New rows create records, edited rows update them,
+	// rows removed from the version are flagged Sync_Status = "Removed from Version".
+	rec = zoho.crm.getRecordById("Data_Aquisition",versionId.toLong());
+	if(rec.get("id") == null)
+	{
+		return;
+	}
+	proposal = rec.get("Proposal_Name");
+	verCode = ifnull(rec.get("Proposal_Version_ID"),"");
+	verName = ifnull(rec.get("Name"),verCode);
+	existMap = Map();
+	existing = zoho.crm.searchRecords("Vendor_Quotes","(Scope_Version:equals:" + versionId + ")");
+	if(existing.isEmpty() == false)
+	{
+		for each  e in existing
+		{
+			if(e.get("Subform_Row_ID") != null)
+			{
+				existMap.put(e.get("Subform_Row_ID").toString(),e.get("id"));
+			}
+		}
+	}
+	seen = List();
+	rows = List();
+	for each  r in ifnull(rec.get("Acquisition_Vendor_Quotes"),List())
+	{
+		vendor = r.get("Acquisition_Vendor");
+		sensor = r.get("Acquisition_Sensor_Name");
+		m = Map();
+		m.put("Quote_Type","Acquisition");
+		m.put("Vendor_Quote_ID",r.get("Acquisition_Quote_ID"));
+		m.put("Quote_Date",r.get("Quote_Date"));
+		m.put("Is_Likely_Vendor",ifnull(r.get("Is_Likely_Acq_Vendor"),false));
+		m.put("Is_Selected_Vendor",ifnull(r.get("Is_Selected_Vendor"),false));
+		m.put("Vendor_Cost",r.get("Vendor_Cost"));
+		m.put("Mapping_Acres",r.get("Mapping_Acres"));
+		m.put("Sensor_Type",r.get("Sensor_Type"));
+		m.put("Frame_Count",r.get("Vendor_Frame_Count"));
+		if(sensor != null)
+		{
+			m.put("Acquisition_Sensor",sensor.get("id"));
+		}
+		else
+		{
+			m.put("Acquisition_Sensor",null);
+		}
+		rows.add({"row":r,"vendor":vendor,"data":m});
+	}
+	for each  r in ifnull(rec.get("Mapping_Quotes"),List())
+	{
+		vendor = r.get("Mapping_Vendor_Name");
+		m = Map();
+		m.put("Quote_Type","Mapping");
+		m.put("Vendor_Quote_ID",r.get("Map_Quote_ID"));
+		m.put("Quote_Date",r.get("Map_Quote_Date"));
+		m.put("Is_Likely_Vendor",ifnull(r.get("Is_Likely_Mapping_Vendor"),false));
+		m.put("Is_Selected_Vendor",ifnull(r.get("Is_Selected_Mapping_Vendor"),false));
+		m.put("Vendor_Cost",r.get("Mapping_Vendor_Cost"));
+		m.put("Mapping_Acres",r.get("Mapping_Acres"));
+		days = r.get("Est_Project_Days");
+		if(days != null && days.toString().isNumber())
+		{
+			m.put("Est_Project_Days",days.toString().toLong());
+		}
+		rows.add({"row":r,"vendor":vendor,"data":m});
+	}
+	for each  item in rows
+	{
+		r = item.get("row");
+		vendor = item.get("vendor");
+		m = item.get("data");
+		rowId = r.get("id").toString();
+		vname = "Vendor TBD";
+		if(vendor != null)
+		{
+			vname = vendor.get("name");
+			m.put("Vendor",vendor.get("id"));
+		}
+		else
+		{
+			m.put("Vendor",null);
+		}
+		m.put("Name",(verName + " | " + m.get("Quote_Type") + " | " + vname).subString(0,min(120,(verName + " | " + m.get("Quote_Type") + " | " + vname).length())));
+		if(proposal != null)
+		{
+			m.put("Proposal",proposal.get("id"));
+		}
+		m.put("Scope_Version",versionId);
+		m.put("Proposal_Version_ID",verCode);
+		m.put("Subform_Row_ID",rowId);
+		m.put("Quote_Status",r.get("Quote_Status"));
+		m.put("Comments",r.get("Comments"));
+		m.put("Sync_Status","Active");
+		if(existMap.containsKey(rowId))
+		{
+			resp = zoho.crm.updateRecord("Vendor_Quotes",existMap.get(rowId),m);
+		}
+		else
+		{
+			resp = zoho.crm.createRecord("Vendor_Quotes",m);
+		}
+		info resp;
+		seen.add(rowId);
+	}
+	for each  k in existMap.keys()
+	{
+		if(seen.contains(k) == false)
+		{
+			zoho.crm.updateRecord("Vendor_Quotes",existMap.get(k),{"Sync_Status":"Removed from Version"});
+		}
+	}
+	// ---- one final vendor per version + roll selected costs up to the version ----
+	vu = Map();
+	warn = List();
+	acqSel = List();
+	for each  r in ifnull(rec.get("Acquisition_Vendor_Quotes"),List())
+	{
+		if(ifnull(r.get("Is_Selected_Vendor"),false) == true)
+		{
+			acqSel.add(r);
+		}
+	}
+	mapSel = List();
+	for each  r in ifnull(rec.get("Mapping_Quotes"),List())
+	{
+		if(ifnull(r.get("Is_Selected_Mapping_Vendor"),false) == true)
+		{
+			mapSel.add(r);
+		}
+	}
+	if(acqSel.size() == 1)
+	{
+		a = acqSel.get(0);
+		if(a.get("Acquisition_Vendor") != null)
+		{
+			vu.put("Selected_Acq_Vendor",a.get("Acquisition_Vendor").get("id"));
+		}
+		vu.put("Total_Vendor_Costs",a.get("Vendor_Cost"));
+		vu.put("Acquisition_Frame_Count",a.get("Vendor_Frame_Count"));
+	}
+	else
+	{
+		vu.put("Selected_Acq_Vendor",null);
+		vu.put("Total_Vendor_Costs",null);
+		if(acqSel.size() > 1)
+		{
+			warn.add(acqSel.size() + " acquisition vendors are marked Selected - keep only one final vendor");
+		}
+	}
+	if(mapSel.size() == 1)
+	{
+		mq = mapSel.get(0);
+		if(mq.get("Mapping_Vendor_Name") != null)
+		{
+			vu.put("Selected_Mapping_Vendor",mq.get("Mapping_Vendor_Name").get("id"));
+		}
+		vu.put("Select_Mapping_Cost",mq.get("Mapping_Vendor_Cost"));
+	}
+	else
+	{
+		vu.put("Selected_Mapping_Vendor",null);
+		vu.put("Select_Mapping_Cost",null);
+		if(mapSel.size() > 1)
+		{
+			warn.add(mapSel.size() + " mapping vendors are marked Selected - keep only one final vendor");
+		}
+	}
+	if(warn.isEmpty())
+	{
+		vu.put("Selection_Warning","");
+	}
+	else
+	{
+		vu.put("Selection_Warning",warn.toString("; "));
+	}
+	zoho.crm.updateRecord("Data_Aquisition",versionId.toLong(),vu);
+}
