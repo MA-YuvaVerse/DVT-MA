@@ -1,0 +1,1253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DroneView</title>
+<script src="https://live.zwidgets.com/js-sdk/1.2/ZohoEmbededAppSDK.min.js"></script>
+<style>
+  /* the custom app's look: 13px, tight rows, grid lines, grey headers, no padding to spare */
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 13px/1.3 Inter, -apple-system, "Helvetica Neue", Arial, sans-serif; color: #1d2433; background: #f7f8fa; }
+  .bar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 8px; background: #fff; border-bottom: 1px solid #d5dae3; flex-wrap: wrap; }
+  .bar b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 560px; }
+  .grow { flex: 1; }
+  .wrap { padding: 4px; display: grid; gap: 4px; }
+  section { background: #fff; border: 1px solid #d5dae3; min-width: 0; }
+  section > h2 { display: flex; align-items: center; gap: 6px; min-height: 24px; margin: 0; padding: 0 6px; background: #eceef1; border-bottom: 1px solid #d5dae3; font-size: 11px; letter-spacing: .03em; text-transform: uppercase; }
+  section > h2 .r { margin-left: auto; display: flex; gap: 4px; align-items: center; text-transform: none; letter-spacing: 0; }
+  .muted { color: #6b7280; font-weight: 400; text-transform: none; letter-spacing: 0; }
+  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 8px; padding: 2px 6px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 8px; padding: 2px 6px; }
+  .span2 { grid-column: span 2; } .span4 { grid-column: 1 / -1; }
+  .f { display: flex; align-items: center; gap: 4px; min-height: 26px; min-width: 0; }
+  .f label { width: 110px; flex: none; color: #6b7280; font-size: 12px; }
+  .f .v { flex: 1; min-width: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+  th, td { border: 1px solid #e3e6ec; height: 26px; padding: 0 5px; white-space: nowrap; text-align: left; }
+  th { background: #f7f8fa; font-size: 11px; font-weight: 600; }
+  td.num, th.num { text-align: right; }
+  td.wrapc { white-space: normal; line-height: 1.25; padding-top: 2px; padding-bottom: 2px; }
+  tr.sel td { background: #eaf1fb; }
+  tr.click { cursor: pointer; }
+  input, select { font: inherit; height: 24px; width: 100%; min-width: 0; border: 1px solid transparent; border-radius: 2px; background: transparent; padding: 0 4px; }
+  input:hover, select:hover { border-color: #cfd5df; }
+  input:focus, select:focus { outline: none; border-color: #3b6fb6; background: #fff; }
+  input.num { text-align: right; }
+  input[type=checkbox], input[type=radio] { width: auto; height: auto; }
+  .flash { background: #dff3e5 !important; border-color: #7fbf95 !important; }
+  button { font: 600 12px Inter, -apple-system, Arial, sans-serif; height: 24px; padding: 0 8px; border: 1px solid #cfd5df; border-radius: 2px; background: #fff; cursor: pointer; white-space: nowrap; color: #1d2433; }
+  button:hover { background: #f1f3f6; }
+  button.green { background: #15803d; border-color: #15803d; color: #fff; }
+  button.green:hover { background: #166534; }
+  button.red { background: #b91c1c; border-color: #b91c1c; color: #fff; padding: 0 5px; }
+  button:disabled { opacity: .45; cursor: default; }
+  .link { border: 0; background: none; padding: 0; height: auto; color: #1d4ed8; font-weight: 600; text-decoration: underline; }
+  .link:hover { background: none; }
+  a.mail { color: #1d4ed8; font-weight: 600; text-decoration: none; }
+  .ico { width: 22px; padding: 0; font-weight: 400; color: #6b7280; }
+  .pill { display: inline-block; padding: 0 6px; border-radius: 9px; font-size: 11px; font-weight: 600; background: #e8eef7; color: #1f3a5f; white-space: nowrap; }
+  .pill.won { background: #dcfce7; color: #166534; }
+  .pill.hold { background: #fef3c7; color: #92400e; }
+  .pill.off { background: #e5e7eb; color: #374151; }
+  .pill.lost { background: #fee2e2; color: #991b1b; }
+  .empty { padding: 6px; color: #6b7280; white-space: normal; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; align-items: start; }
+  .halves { display: grid; grid-template-columns: 1fr 1fr; }
+  .halves > div + div { border-left: 1px solid #d5dae3; }
+  .sub { display: flex; gap: 6px; align-items: center; height: 24px; padding: 0 6px; background: #f7f8fa; border-bottom: 1px solid #e3e6ec; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+  .calc { display: block; height: 24px; line-height: 24px; padding: 0 4px; background: #f7f8fa; border-radius: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .calc.num { text-align: right; }
+  .red { color: #b91c1c; }
+  .amber { color: #92400e; }
+  .low { background: #f0fdf4; }
+  #status { font-size: 11px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
+  .err { color: #b91c1c !important; }
+  .tabs { display: flex; }
+  .tabs button { border-radius: 0; margin-left: -1px; }
+  .tabs button:first-child { border-radius: 2px 0 0 2px; margin-left: 0; }
+  .tabs button:last-child { border-radius: 0 2px 2px 0; }
+  .tabs button.on { background: #1f3a5f; border-color: #1f3a5f; color: #fff; }
+  .steps button { height: 20px; padding: 0 6px; font-size: 11px; }
+  .chk { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #374151; white-space: nowrap; cursor: pointer; }
+  .ticks { display: flex; flex-wrap: wrap; gap: 0 10px; min-height: 24px; align-items: center; }
+  .search { width: 220px; border-color: #cfd5df; }
+  .pick { position: relative; display: block; }
+  .pick.inline { display: inline-block; }
+  .pick.inline input { border-color: #cfd5df; width: 210px; }
+  .opts { display: none; position: absolute; top: 25px; left: 0; z-index: 20; min-width: 240px; max-height: 240px; overflow: auto; background: #fff; border: 1px solid #cfd5df; box-shadow: 0 1px 3px rgba(0,0,0,.1); text-transform: none; letter-spacing: 0; font-size: 12px; }
+  .opts button { display: block; width: 100%; height: 26px; border: 0; border-bottom: 1px solid #eef0f3; border-radius: 0; text-align: left; font-weight: 400; }
+  .opts button:hover { background: #eaf1fb; }
+  /* the list grids: sticky header, frozen first column, group and total rows like the sheets */
+  .figs { display: flex; gap: 14px; align-items: center; padding: 3px 8px; background: #fff; border: 1px solid #d5dae3; font-size: 12px; flex-wrap: wrap; }
+  .figs b { font-size: 13px; }
+  .scroll { overflow: auto; max-height: calc(100vh - 80px); background: #fff; border: 1px solid #d5dae3; }
+  section .scroll { border: 0; max-height: 360px; }
+  table.list { width: auto; min-width: 100%; }
+  table.list thead th { position: sticky; top: 0; z-index: 2; cursor: pointer; white-space: normal; line-height: 1.15; vertical-align: bottom; padding-top: 3px; padding-bottom: 3px; }
+  table.list thead th:hover { background: #eceef1; }
+  table.list td:first-child, table.list th:first-child { position: sticky; left: 0; z-index: 1; background: #fff; }
+  table.list thead th:first-child { z-index: 3; background: #f7f8fa; }
+  table.list tr[data-open] { cursor: pointer; }
+  table.list tr[data-open]:hover td { background: #f3f7fd; }
+  table.list tr.grp td { background: #eceef1; font-weight: 600; font-size: 11px; }
+  table.list tr.tot td { background: #f7f8fa; font-weight: 600; border-top: 2px solid #cfd5df; }
+  .qscroll { overflow-x: auto; }
+  .qscroll table { min-width: 960px; }
+  .qscroll td input { min-width: 110px; }
+  .qscroll td input.num { min-width: 76px; }
+  .qscroll td input[type=date] { min-width: 118px; }
+  .qscroll td input[type=radio] { min-width: 0; }
+  .qscroll td select { min-width: 96px; }
+  .how { padding: 3px 8px; font-size: 12px; color: #4b5563; white-space: normal; }
+  .how summary { cursor: pointer; color: #1d4ed8; }
+  textarea { font: inherit; width: 100%; min-height: 44px; border: 1px solid #cfd5df; border-radius: 2px; padding: 3px 4px; resize: vertical; }
+  .note { padding: 3px 6px; border-bottom: 1px solid #eef0f3; white-space: pre-wrap; }
+  .note .muted { font-size: 11px; }
+  /* the client quotation: a page to print or save as PDF, never any cost */
+  .letter { background: #fff; border: 1px solid #d5dae3; padding: 24px 32px; }
+  .letter h1 { margin: 0; font-size: 20px; }
+  .letter .meta td { border: 0; height: 20px; padding: 0 12px 0 0; }
+  .letter p { margin: 10px 0; max-width: 820px; }
+  @media print { .bar, .noprint { display: none !important; } body { background: #fff; } .wrap { padding: 0; } .letter { border: 0; padding: 0; } }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } .two, .halves, .grid2 { grid-template-columns: 1fr; } .halves > div + div { border-left: 0; border-top: 1px solid #d5dae3; } .search { width: 140px; } }
+</style>
+</head>
+<body>
+<datalist id="sensors"><option>UltraCam Eagle</option><option>UltraCam Osprey</option><option>Leica DMC III</option><option>Leica TerrainMapper</option><option>Leica CityMapper</option><option>Riegl VQ-1560</option><option>Riegl VQ-780</option><option>Phase One PAS</option><option>DJI Zenmuse L2</option><option>DJI Zenmuse P1</option><option>Mobile Scanner</option><option>Terrestrial Scan</option></datalist>
+<div class="bar">
+  <span class="tabs" id="modes"><button data-mode="home">Home</button><button data-mode="proposals">Proposals</button><button data-mode="reports">Pipeline</button><button data-mode="projects">Projects</button></span>
+  <span id="bar-list" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input id="q" class="search" placeholder="Filter: client, name, number" autocomplete="off">
+    <label class="chk" id="only-w"><input type="checkbox" id="only"> <span id="only-l">Open only</span></label>
+    <button id="new">New proposal</button>
+  </span>
+  <span id="bar-rec" style="display:none;gap:8px;align-items:center;min-width:0">
+    <button id="back">← All proposals</button><b id="rec-title"></b>
+  </span>
+  <span id="newform" style="display:none;gap:4px;align-items:center">
+    <input id="np-name" placeholder="Project Name" style="width:200px;border-color:#cfd5df">
+    <span class="pick inline"><input data-pick="companies" data-act="newclient" placeholder="Client: type to search" autocomplete="off"><div class="opts"></div></span>
+    <button id="np-create" class="green">Create</button><button id="np-cancel">Cancel</button>
+  </span>
+  <span class="grow"></span>
+  <span id="status">Loading…</span>
+</div>
+<div class="wrap" id="main"><div class="empty">Loading from Zoho…</div></div>
+
+<script>
+// DroneView proposals inside Zoho CRM, adapted to the DroneView account's own modules (Nov 24):
+//   Deals = proposals (Proposal_ID), Scope_Versions = versions (ProposalID.n, Value, Status Selected = accepted),
+//   Vendor_Quotes = quotes (kept in step with each version's Acquisition / Mapping quote tables by Zoho's scripts),
+//   Project = projects (one per Selected version, made by Zoho's proposal script at DVT Won).
+// The screen adds nothing to the account: it reads and writes those modules, and Zoho's own scripts do the numbering,
+// the version <-> scope row sync, the cost roll-up (selected acquisition + selected mapping + internal cost) and the projects.
+// The adapter below translates this account's field names to the short names the screens were written with.
+// Original notes: The screen is for proposals only (team decision, Nov 23): companies,
+// contacts, vendor locations and sensors are kept on Zoho's own Accounts pages, and projects in Zoho's own DV Projects
+// module (the Projects tab here is a placeholder that opens them there). The data stays in Zoho:
+//   Deals = proposals, Scope_Versions = versions, Vendor_Quotes = quotes, Project = projects, Accounts + Contacts =
+//   companies, Acquisition_Vendor_Sensor = a vendor's sensors (offered on the acquisition quotes). The Deluge scripts number the proposals and versions, keep one quote
+//   Selected per type, recalculate the margin and create the project(s) when versions are accepted.
+// Speed: the last copy of every list is kept in this browser and drawn at once, then refreshed from Zoho in the
+// background; a save shows its result at once (the margin is worked out here with the script's rule) and Zoho's own
+// numbers follow a few seconds later.
+const STATUSES = ["Preparing Proposal", "Open", "Open/HIGH", "Client Lost", "Client Won/DVT Lost", "On Hold", "Abandoned", "Cancelled"];
+const CLOSED = ["DVT Won", "Client Lost", "Client Won/DVT Lost", "Abandoned", "Cancelled"];
+const LOST = ["Client Lost", "Client Won/DVT Lost", "Abandoned", "Cancelled"];
+const DECIDED_LOST = ["Client Lost", "Client Won/DVT Lost"]; // win rate counts these; Abandoned and Cancelled are left out
+const PROJ = "Project", VER = "Scope_Versions", QUO = "Vendor_Quotes", LOC = "Vendor_Locations", SEN = "Acquisition_Vendor_Sensor";
+const FOLLOW_DAYS = 14; // an open proposal with no follow-up for this many days is due
+const CACHE = "dvt-widget-cache-1";
+const S = {
+  mode: "home", view: "list", rgroup: {}, q: "", tok: 0, ltok: 0, lastLoad: 0,
+  only: { proposals: false },
+  sort: {}, fields: {}, contacts: {},
+  deals: [], allVersions: [], allProjects: [], allQuotes: [], accounts: [], allLocations: [], allSensors: [],
+  deal: null, versions: [], quotes: [], projects: [], history: [], notes: [], picked: null, award: new Set(), sure: null,
+};
+const $ = (s) => document.querySelector(s);
+const money = (n) => (n == null || n === "" || Number.isNaN(Number(n)) ? "" : (Number(n) < 0 ? "-$" : "$") + Math.abs(Math.round(Number(n))).toLocaleString("en-US"));
+const rate = (n) => (n == null || !Number.isFinite(Number(n)) ? "" : "$" + Number(n).toFixed(2));
+const pct = (n) => (n == null || n === "" || !Number.isFinite(Number(n)) ? "" : Number(n).toFixed(1) + "%");
+const num = (x) => (x == null || x === "" ? null : Number(x));
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const fmtD = (s) => (s ? `${s.slice(5, 7)}/${s.slice(8, 10)}/${s.slice(2, 4)}` : "");
+const d10 = (s) => String(s || "").slice(0, 10);
+const today = new Date().toLocaleDateString("en-CA");
+const say = (t, bad) => { $("#status").textContent = t; $("#status").className = bad ? "err" : ""; };
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const rows = (r) => (r && Array.isArray(r.data) ? r.data : []);
+const days = (a, b) => (a && b ? Math.round((Date.parse(d10(b)) - Date.parse(d10(a))) / 864e5) : null);
+const sumOf = (list, f) => { const v = list.map(f).filter((x) => x != null && Number.isFinite(Number(x))); return v.length ? v.reduce((a, b) => a + Number(b), 0) : null; };
+const avgOf = (list, f) => { const v = list.map(f).filter((x) => x != null && Number.isFinite(Number(x))); return v.length ? v.reduce((a, b) => a + Number(b), 0) / v.length : null; };
+const ok = (r) => r?.data?.[0]?.code === "SUCCESS";
+const openZoho = (ent, id) => ZOHO.CRM.UI.Record.open({ Entity: ent, RecordID: id }); // Zoho's own record page
+const types = (a) => a.DV_Company_Type || [];
+const zohoSaid = (r) => say("Zoho said: " + (r?.data?.[0]?.message || r?.message || "could not save"), true);
+const time = () => new Date().toLocaleTimeString();
+
+// ---------- adapter: this account's field names <-> the names the screens use ----------
+const FMAP = {
+  Deals: { Proposal_Number: "Proposal_ID", Opportunity_Type: "Opportunity_Type1", City: "Opportunity_City", DV_Latest_Follow_Up: "Followup_Date", DV_Next_Follow_Up: "Next_Follow_up_Date", Closing_Date: "Proposal_Due_Date" },
+  Scope_Versions: { Proposal: "Proposal_Name", Name: "Title", Price: "Value" },
+  Vendor_Quotes: { Version: "Scope_Version", Cost: "Vendor_Cost", Selected: "Is_Selected_Vendor", Turnaround_Days: "Est_Project_Days", Expiry: "Quote_Expiry_Date" },
+  Project: { Version: "Proposal_Version", Contract_Value: "Awarded_Contract_Value", Mapping_Cost: "Processing_Cost", Mapping_Vendor: "Processing_Vendor" },
+  Acquisition_Vendor_Sensor: { Vendor: "Company" },
+};
+const QUOTE_STATUSES = ["Not Started", "Quotes Requested", "Quotes Received", "Selected", "Alternate", "Not Required"];
+const DECLINED = ["Not Required", "Declined"];
+function normalize(m, r) {
+  if (!r || r.__dvt) return r;
+  if (m === VER) { // Name is the version number (2600166.1); the screens call the version's title Name
+    const code = r.Name || "";
+    r.Version_Code = code;
+    r.Version_No = code.includes(".") ? code.split(".").pop() : null;
+    r.Name = r.Title || "";
+    r.Accepted = r.Status === "Selected";
+  }
+  if (m === PROJ) { r.Project_Title = r.Name; r.Name = r.Project_number || r.Name; }
+  if (m === QUO) r.Sensor = r.Acquisition_Sensor?.name || "";
+  for (const [w, z] of Object.entries(FMAP[m] || {})) if (!(m === VER && w === "Name")) r[w] = r[z];
+  if (m === "Accounts") {
+    const t = r.Company_Type || [], sub = r.Company_Subtype || "";
+    r.DV_Company_Type = [...(t.includes("Customer") ? ["Client"] : []), ...(t.some((x) => /vendor/i.test(x)) || /vendor/i.test(sub) ? ["Vendor"] : [])];
+  }
+  if (m === "Contacts") r.DV_Primary = r.Is_Primary_Contact === "Yes" || r.Is_Primary_Contact === true;
+  Object.defineProperty(r, "__dvt", { value: 1, enumerable: false });
+  return r;
+}
+function toZoho(m, data) {
+  const out = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (m === VER && k === "Version_No") continue; // numbered by Zoho's script
+    if (m === VER && k === "Accepted") { out.Status = v ? "Selected" : "Open"; continue; }
+    if (k === "_RecordName") { out.Name = v; continue; } // the record's own Name (versions: renamed ProposalID.n by Zoho's script)
+    out[(FMAP[m] || {})[k] || k] = v;
+  }
+  return out;
+}
+
+// ---------- loading ----------
+function fieldFor(module, ...labels) {
+  const list = S.fields[module] || [];
+  for (const l of labels) {
+    const f = list.find((x) => x.field_label.toLowerCase() === l.toLowerCase()) || list.find((x) => x.field_label.toLowerCase().includes(l.toLowerCase()));
+    if (f) return f.api_name;
+  }
+  return null;
+}
+function picklist(module, api) {
+  const f = (S.fields[module] || []).find((x) => x.api_name === api);
+  return (f?.pick_list_values || []).map((p) => p.display_value).filter((v) => v && v !== "-None-");
+}
+async function loadFields(module) {
+  const fs = (await ZOHO.CRM.META.getFields({ Entity: module })).fields || [];
+  S.fields[module] = fs.map((f) => ({ api_name: f.api_name, field_label: f.field_label, pick_list_values: (f.pick_list_values || []).map((p) => ({ display_value: p.display_value, id: p.id })) }));
+}
+async function loadAll(entity, extra = {}) {
+  const all = [];
+  for (let page = 1; page <= 5; page++) {
+    const d = rows(await ZOHO.CRM.API.getAllRecords({ Entity: entity, sort_order: "desc", per_page: 200, page, ...extra }));
+    all.push(...d.map((r) => normalize(entity, r)));
+    if (d.length < 200) break;
+  }
+  return all;
+}
+// only the columns the screens use: the shared Deals and Accounts carry many other fields that would triple the download
+const DEAL_FIELDS = "Deal_Name,Stage,Account_Name,Contact_Name,Owner,Probability,Amount,Final_Proposal_Value,Proposal_Due_Date,Proposal_Request_Date,Created_Time,Proposal_ID,Opportunity_Type1,Parent_Project,Addon_Parent_Version,Opportunity_City,Opportunity_State,Followup_Date,Next_Follow_up_Date,Layout";
+const ACC_FIELDS = "Account_Name,Company_Type,Company_Subtype"; // the client and vendor pickers only: companies are edited on Zoho's Accounts pages
+async function loadLists(all) {
+  // Zoho's widget bridge answers one call at a time. So the background refresh asks for one list at a time (a click
+  // made meanwhile waits for one call, not seven), the four lists every screen needs come first and are drawn at once,
+  // and companies, vendor locations and sensors (for the pickers; they change rarely) only every ten minutes
+  const t0 = Date.now();
+  const deals = await loadAll("Deals", { fields: DEAL_FIELDS });
+  const versions = await loadAll(VER), projects = await loadAll(PROJ), quotes = await loadAll(QUO);
+  S.deals = deals;
+  S.allVersions = versions; S.allProjects = projects; S.allQuotes = quotes.filter((q) => q.Sync_Status !== "Removed from Version");
+  keepAddsAndDeletes();
+  reapply();
+  if (S.view === "list") paint();
+  if (all || !S.accounts.length || Date.now() - (S.accAt || 0) > 6e5) {
+    const accounts = await loadAll("Accounts", { sort_by: "Account_Name", sort_order: "asc", fields: ACC_FIELDS });
+    const locations = [], sensors = await loadAll(SEN).catch(() => []); // quotes have no location field in this account
+    S.accounts = accounts.sort((a, b) => String(a.Account_Name).localeCompare(String(b.Account_Name)));
+    S.allLocations = locations; S.allSensors = sensors; S.accAt = Date.now();
+    reapply();
+  }
+  S.lastLoad = Date.now(); S.loadSecs = ((Date.now() - t0) / 1000).toFixed(1);
+  saveCache();
+}
+function saveCache() {
+  try {
+    localStorage.setItem(CACHE, JSON.stringify({ t: Date.now(), ft: S.fieldsAt || 0, at: S.accAt || 0, fields: S.fields, deals: S.deals, allVersions: S.allVersions, allProjects: S.allProjects, allQuotes: S.allQuotes, accounts: S.accounts, allLocations: S.allLocations, allSensors: S.allSensors }));
+  } catch (e) { /* no room or no storage: the screen still works, it just loads from Zoho */ }
+}
+let cacheTimer = null;
+const saveCacheSoon = () => { clearTimeout(cacheTimer); cacheTimer = setTimeout(saveCache, 1500); };
+function loadCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE) || "null");
+    if (!c || Date.now() - c.t > 7 * 864e5) return false;
+    Object.assign(S, { accAt: c.at || 0, fieldsAt: c.ft || 0, fields: c.fields || {}, deals: c.deals || [], allVersions: c.allVersions || [], allProjects: c.allProjects || [], allQuotes: c.allQuotes || [], accounts: c.accounts || [], allLocations: c.allLocations || [], allSensors: c.allSensors || [] });
+    return true;
+  } catch (e) { return false; }
+}
+async function rel(entity, id, list) {
+  try {
+    const r = await ZOHO.CRM.API.getRelatedRecords({ Entity: entity, RecordID: id, RelatedList: list, page: 1, per_page: 200 });
+    return Array.isArray(r?.data) ? r.data : [];
+  } catch (e) { return null; }
+}
+async function related(module, id) {
+  // quotes and projects: the proposal's related list (instant); versions have no related list, so they are searched
+  // (fetchDeal then adds any version the search index has not caught yet, from the scope rows' Version ID links)
+  const key = module === VER ? "Proposal_Name" : "Proposal";
+  let r = module === VER ? null : await rel("Deals", id, module);
+  if (!r) r = rows(await ZOHO.CRM.API.searchRecord({ Entity: module, Type: "criteria", Query: `(${key}:equals:${id})` }).catch(() => null));
+  r = r.map((x) => normalize(module, x));
+  return module === QUO ? r.filter((q) => q.Sync_Status !== "Removed from Version") : r;
+}
+const cname = (c) => c.Full_Name || [c.First_Name, c.Last_Name].filter(Boolean).join(" ");
+async function contactsOf(accountId, force) {
+  if (!accountId) return [];
+  if (!S.contacts[accountId] || force) S.contacts[accountId] = ((await rel("Accounts", accountId, "Contacts")) || []).map((c) => normalize("Contacts", c));
+  return S.contacts[accountId];
+}
+
+let V = {};
+function mapFields() {
+  V = {
+    no: "Version_No", price: "Price", acres: "Mapping_Acres", accepted: "Accepted", // set by normalize()
+  };
+}
+function verLabel(v) {
+  const n = v?.[V.no];
+  if (n == null || n === "") return "…";
+  const s = String(n);
+  return "." + (s.includes(".") ? s.split(".").pop() : s);
+}
+const fullVer = (v, d = S.deal) => v?.Version_Code || (d?.Proposal_Number || "") + verLabel(v); // the version ID: 2600166.1
+const byVer = (a, b) => String(a[V.no] ?? "9999").localeCompare(String(b[V.no] ?? "9999"), undefined, { numeric: true });
+// Zoho's status history can hand back the status as its id: turn it back into the name
+const stageName = (x) => { const v = x?.name ?? x; return (S.fields.Deals || []).find((f) => f.api_name === "Stage")?.pick_list_values.find((p) => p.id === v)?.display_value || v; };
+function pill(status) {
+  const tone = status === "DVT Won" || status === "Accepted" ? "won" : LOST.includes(status) ? "lost" : status === "On Hold" || status === "Ready for Invoicing" ? "hold" : status === "Completed" ? "off" : "";
+  return status ? `<span class="pill ${tone}">${esc(status)}</span>` : "";
+}
+
+// ---------- the numbers, worked out with the same rules as the Zoho scripts ----------
+const qTotal = (q) => (q.Cost == null && q.Mobilization == null ? null : (num(q.Cost) || 0) + (num(q.Mobilization) || 0));
+function chosenCost(v, type, quotes = S.allQuotes) {
+  const qs = quotes.filter((q) => q.Version?.id === v.id && q.Quote_Type === type && q.Selected && qTotal(q) != null);
+  return qs.length ? qs.reduce((a, q) => a + qTotal(q), 0) : null;
+}
+function verCalc(v, quotes) {
+  // the account's rule: Proposal Version Cost = selected acquisition + selected mapping + Internal Cost; margin = Value − cost
+  const price = num(v[V.price]), acres = num(v[V.acres]), internal = num(v.Internal_Cost);
+  const acq = chosenCost(v, "Acquisition", quotes), map = chosenCost(v, "Mapping", quotes);
+  const cost = acq != null || map != null || internal != null ? (acq || 0) + (map || 0) + (internal || 0) : null;
+  const cm = price != null && cost != null ? price - cost : null;
+  return { price, acq, map, internal, cost, cm, cmPct: cm != null && price ? (cm / price) * 100 : null, perAcre: price != null && acres ? price / acres : null };
+}
+function propInfo(d, fresh) {
+  const vs = (fresh || S.allVersions.filter((v) => v.Proposal?.id === d.id)).slice().sort(byVer);
+  const prices = vs.map((v) => num(v[V.price])).filter((x) => x != null);
+  // versions are options for one award: counted once (the highest), never added; once won, the accepted ones (several when awarded together)
+  const acc = vs.filter((v) => v[V.accepted] && num(v[V.price]) != null);
+  const top = acc.length ? acc.reduce((a, v) => a + num(v[V.price]), 0) : prices.length ? Math.max(...prices) : null;
+  const open = !CLOSED.includes(d.Stage);
+  const pipeline = open ? num(d.Amount) ?? top : null; // Estimated Proposal Value when typed, else the highest version price
+  const prob = open ? num(d.Probability) : null;
+  const projects = S.allProjects.filter((p) => p.Proposal?.id === d.id).sort((a, b) => cmp(a.Name, b.Name)); // one, or one per version
+  const project = projects[0];
+  return {
+    vs, top: d.Stage === "DVT Won" && num(d.Final_Proposal_Value) != null ? num(d.Final_Proposal_Value) : top, open, pipeline, prob, project, projects, wonValue: projects.length ? sumOf(projects, (p) => fin(p).cv) : null,
+    weighted: pipeline != null && prob != null ? (pipeline * prob) / 100 : null,
+    daysOpen: open ? days(d.Created_Time, today) : null,
+    daysToAward: project ? days(d.Created_Time, project.Created_Time) : null,
+  };
+}
+function followDue(d) {
+  if (CLOSED.includes(d.Stage)) return false;
+  const latest = d.DV_Latest_Follow_Up, next = d.DV_Next_Follow_Up;
+  if (next && (!latest || latest < next)) return next <= today;
+  return days(latest || d.Created_Time, today) >= FOLLOW_DAYS;
+}
+const dealOf = (p) => S.deals.find((d) => d.id === p?.Proposal?.id);
+const clientOf = (p) => dealOf(p)?.Account_Name?.name || "";
+function fin(p) {
+  const cv = num(p.Contract_Value), billed = num(p.Billed_Amount), paid = num(p.Paid_Amount);
+  const acq = num(p.Acquisition_Cost), map = num(p.Mapping_Cost);
+  const cm = cv != null && (acq != null || map != null) ? cv - (acq || 0) - (map || 0) : num(p.Contribution_Margin);
+  return { cv, billed, paid, acq, map, cm, toBill: cv != null ? cv - (billed || 0) : null, unpaid: billed != null ? billed - (paid || 0) : null, cmPct: cm != null && cv ? (cm / cv) * 100 : null };
+}
+// ---------- one grid for every list: sortable headers, frozen first column, group rows, total row ----------
+function cmp(a, b) {
+  const ea = a == null || a === "", eb = b == null || b === "";
+  if (ea || eb) return ea && eb ? 0 : ea ? 1 : -1;
+  return typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b), undefined, { numeric: true });
+}
+function grid(key, cols, items, { open, idOf, group, order, totalLabel = "Total", empty }) {
+  const s = S.sort[key];
+  const col = s && cols.find((c) => c.k === s.k);
+  if (col) items = [...items].sort((a, b) => { const x = cmp(col.v(a.r, a.i), col.v(b.r, b.i)); return x === 0 ? 0 : (col.v(a.r, a.i) == null || col.v(b.r, b.i) == null) ? x : x * s.d; });
+  const th = cols.map((c) => `<th data-sort="${key}|${c.k}" class="${c.num ? "num" : ""}" style="min-width:${c.w || 60}px${c.max ? `;max-width:${c.max}px` : ""}" title="${esc(c.t || "Click to sort")}">${c.h}${col === c ? (s.d > 0 ? " ▲" : " ▼") : ""}</th>`).join("");
+  const td = (c, it) => { const x = c.v(it.r, it.i); return `<td class="${c.num ? "num" : ""} ${c.cls ? c.cls(x, it.r, it.i) : ""}"${c.max ? ` style="max-width:${c.max}px;overflow:hidden;text-overflow:ellipsis" title="${esc(x)}"` : ""}>${c.f ? c.f(x, it.r, it.i) : esc(x ?? "")}</td>`; };
+  const row = (it) => `<tr${open ? ` data-open="${open}" data-id="${idOf ? idOf(it.r) : it.r.id}"` : ""}>${cols.map((c) => td(c, it)).join("")}</tr>`;
+  let body = "";
+  if (group) {
+    const names = [...order, ...new Set(items.map((it) => group(it.r)).filter((g) => !order.includes(g)))];
+    for (const g of names) {
+      const its = items.filter((it) => group(it.r) === g);
+      if (its.length) body += `<tr class="grp"><td colspan="${cols.length}">${esc(g || "No status")} <span class="muted">${its.length}</span></td></tr>` + its.map(row).join("");
+    }
+  } else body = items.map(row).join("");
+  let tot = "";
+  if (items.length && cols.some((c) => c.total)) {
+    tot = `<tr class="tot">${cols.map((c, ix) => {
+      if (!c.total) return `<td>${ix === 0 ? `${totalLabel} <span class="muted">${items.length}</span>` : ""}</td>`;
+      const vals = items.map((it) => c.v(it.r, it.i)).filter((x) => x != null && x !== "" && !Number.isNaN(Number(x))).map(Number);
+      if (!vals.length) return `<td></td>`;
+      const sum = vals.reduce((a, b) => a + b, 0);
+      return `<td class="num">${c.total === "avg" ? (sum / vals.length).toFixed(1) : c.f ? c.f(sum) : sum}</td>`;
+    }).join("")}</tr>`;
+  }
+  return `<div class="scroll"><table class="list"><thead><tr>${th}</tr></thead><tbody>${body || `<tr><td colspan="${cols.length}" class="empty">${empty}</td></tr>`}${tot}</tbody></table></div>`;
+}
+const matches = (...vals) => !S.q || vals.join(" ").toLowerCase().includes(S.q.toLowerCase());
+const mini = (head, body, empty) => `<table>${head}${body || `<tr><td colspan="20" class="empty">${empty}</td></tr>`}</table>`;
+
+// ---------- Home: what needs doing today on the proposals ----------
+function renderHome() {
+  const all = S.deals.map((d) => ({ d, i: propInfo(d) }));
+  const open = all.filter((x) => x.i.open);
+  const due = open.filter((x) => followDue(x.d)).sort((a, b) => cmp(a.d.DV_Next_Follow_Up || a.d.DV_Latest_Follow_Up || d10(a.d.Created_Time), b.d.DV_Next_Follow_Up || b.d.DV_Latest_Follow_Up || d10(b.d.Created_Time)));
+  const aged = open.filter((x) => x.i.daysOpen > 45).sort((a, b) => b.i.daysOpen - a.i.daysOpen);
+  const openIds = new Set(open.map((x) => x.d.id));
+  const soon = new Date(Date.now() + 14 * 864e5).toLocaleDateString("en-CA");
+  const expiring = S.allQuotes.filter((q) => q.Expiry && q.Expiry <= soon && openIds.has(q.Proposal?.id) && !DECLINED.includes(q.Quote_Status)).sort((a, b) => cmp(a.Expiry, b.Expiry));
+  const verOf = (q) => S.allVersions.find((v) => v.id === q.Version?.id);
+  const dealLink = (d) => `<button class="link" data-goproposal="${d.id}">${esc(d.Proposal_Number || "(no number)")}</button>`;
+  $("#main").innerHTML = `
+    <div class="figs"><span>Open proposals <b>${open.length}</b></span><span>Pipeline <b>${money(sumOf(open, (x) => x.i.pipeline))}</b></span><span>Weighted <b>${money(sumOf(open, (x) => x.i.weighted))}</b></span>
+      <span>Follow-ups due <b class="${due.length ? "red" : ""}">${due.length}</b></span><span>Open over 45 days <b>${aged.length}</b></span><span class="muted">${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span></div>
+    <section><h2>Follow-ups due <span class="muted">next follow-up date reached, or no follow-up for ${FOLLOW_DAYS} days · type a later Next date and it leaves the list</span></h2>
+      ${mini(`<tr><th>Proposal ID</th><th>Client</th><th>Project Name</th><th>DVT PM</th><th style="width:118px">Latest Follow Up</th><th style="width:118px">Next Follow Up</th><th class="num">Days Open</th></tr>`,
+        due.map(({ d, i }) => `<tr><td>${dealLink(d)}</td><td>${esc(d.Account_Name?.name || "")}</td><td class="wrapc">${esc(d.Deal_Name || "")}</td><td>${esc(d.Owner?.name || "")}</td>
+          <td>${inp("Deals", d.id, "DV_Latest_Follow_Up", d.DV_Latest_Follow_Up, "date")}</td><td class="${d.DV_Next_Follow_Up && d.DV_Next_Follow_Up < today ? "red" : ""}">${inp("Deals", d.id, "DV_Next_Follow_Up", d.DV_Next_Follow_Up, "date")}</td><td class="num">${i.daysOpen ?? ""}</td></tr>`).join(""), "Nothing due. Every open proposal has been followed up.")}
+    </section>
+    <div class="two">
+      <section><h2>Open over 45 days <span class="muted">counted at a lower probability</span></h2>
+        ${mini(`<tr><th>Proposal ID</th><th>Client</th><th>Project Name</th><th class="num">Proposal Total</th><th class="num">Days Open</th><th>Status</th></tr>`,
+          aged.map(({ d, i }) => `<tr><td>${dealLink(d)}</td><td>${esc(d.Account_Name?.name || "")}</td><td class="wrapc">${esc(d.Deal_Name || "")}</td><td class="num">${money(i.top)}</td><td class="num amber">${i.daysOpen}</td><td>${pill(d.Stage)}</td></tr>`).join(""), "None.")}
+      </section>
+      <section><h2>Vendor quotes expiring <span class="muted">on open proposals, within 14 days or already past</span></h2>
+        ${mini(`<tr><th>Proposal ID</th><th>Vendor</th><th>Type</th><th class="num">Total</th><th>Expires</th></tr>`,
+          expiring.map((q) => { const d = S.deals.find((x) => x.id === q.Proposal?.id); return `<tr><td>${d ? dealLink(d) : ""} <span class="muted">${esc(verLabel(verOf(q)))}</span></td><td>${esc(q.Vendor?.name || "")}</td><td>${esc(q.Quote_Type || "")}</td><td class="num">${money(qTotal(q))}</td><td class="${q.Expiry < today ? "red" : ""}">${fmtD(q.Expiry)}</td></tr>`; }).join(""), "None.")}
+      </section>
+    </div>`;
+}
+
+// ---------- Proposals list ----------
+const PCOLS = [
+  { k: "num", h: "Proposal ID", w: 84, v: (d) => d.Proposal_Number || "", f: (x) => `<b>${esc(x)}</b>` },
+  { k: "client", h: "Client", w: 150, max: 220, v: (d) => d.Account_Name?.name || "" },
+  { k: "name", h: "Project Name", w: 200, max: 320, v: (d) => d.Deal_Name || "" },
+  { k: "vers", h: "Versions", w: 70, t: "Accepted versions in bold", v: (d, i) => i.vs.length || null, f: (x, d, i) => i.vs.map((v) => (v[V.accepted] ? `<b>${esc(verLabel(v))}</b>` : esc(verLabel(v)))).join(" ") },
+  { k: "total", h: "Proposal Total", num: 1, w: 84, t: "Open: the highest version price (versions are options for one award, never added). Won: the accepted versions' price", v: (d, i) => i.top, f: money },
+  { k: "status", h: "Opportunity Status", w: 120, v: (d) => d.Stage || "", f: (x) => pill(x) },
+  { k: "prob", h: "Prob. %", num: 1, w: 50, t: "Probability of the status (Zoho pipeline setting); open proposals only", v: (d, i) => i.prob, f: (x) => (x == null ? "" : x + "%") },
+  { k: "pipe", h: "Pipeline Value", num: 1, w: 84, t: "Open proposals: the highest version price, counted once", v: (d, i) => i.pipeline, f: money, total: "sum" },
+  { k: "wtd", h: "Weighted", num: 1, w: 80, t: "Pipeline Value × probability", v: (d, i) => i.weighted, f: money, total: "sum" },
+  { k: "cpm", h: "Client's PM", w: 110, v: (d) => d.Contact_Name?.name || "" },
+  { k: "dpm", h: "DVT PM", w: 90, v: (d) => d.Owner?.name || "" },
+  { k: "days", h: "Days Open", num: 1, w: 50, v: (d, i) => i.daysOpen, cls: (x) => (x > 45 ? "amber" : "") },
+  { k: "latest", h: "Latest Follow Up", w: 70, v: (d) => d.DV_Latest_Follow_Up || "", f: fmtD },
+  { k: "next", h: "Next Follow Up", w: 70, v: (d) => d.DV_Next_Follow_Up || "", f: fmtD, cls: (x, d) => (followDue(d) ? "red" : "") },
+  { k: "close", h: "Due Date", w: 70, v: (d) => d.Closing_Date || "", f: fmtD },
+  { k: "type", h: "Type", w: 90, v: (d) => d.Opportunity_Type || "" },
+  { k: "proj", h: "DVT Project #", w: 100, v: (d, i) => i.project?.Name || "", f: (x, d, i) => i.projects.map((p) => `<button class="link" data-goproject="${p.id}">${esc(p.Name)}</button>`).join(" ") },
+];
+function renderProposalList() {
+  const all = S.deals.map((d) => ({ r: d, i: propInfo(d) }));
+  const open = all.filter((x) => x.i.open);
+  const items = all.filter((x) => (!S.only.proposals || x.i.open) && matches(x.r.Proposal_Number, x.r.Account_Name?.name, x.r.Deal_Name, x.r.Contact_Name?.name, x.r.Stage));
+  if (!S.sort.p) S.sort.p = { k: "num", d: -1 };
+  $("#main").innerHTML = `
+    <div class="figs"><span>Open proposals <b>${open.length}</b></span><span title="Counted once per open proposal (its highest version), never by adding versions">Pipeline <b>${money(sumOf(open, (x) => x.i.pipeline))}</b></span><span>Weighted <b>${money(sumOf(open, (x) => x.i.weighted))}</b></span>
+      <span>Won <b>${all.filter((x) => x.r.Stage === "DVT Won").length}</b></span><span>Lost <b>${all.filter((x) => LOST.includes(x.r.Stage)).length}</b></span>
+      <span class="muted">Click a row to open the proposal; click a heading to sort.</span></div>
+    ${grid("p", PCOLS, items, { open: "proposal", empty: S.deals.length ? "No proposal matches." : "No proposals yet. Click New proposal." })}`;
+}
+
+// ---------- Projects: a placeholder. Projects are worked on Zoho's own DV Projects pages; this list opens them there ----------
+const JCOLS = [
+  { k: "num", h: "DVT Project #", w: 104, v: (p) => p.Name || "", f: (x) => `<b>${esc(x)}</b>` },
+  { k: "client", h: "Client", w: 140, max: 220, v: (p) => p.Client?.name || clientOf(p) },
+  { k: "name", h: "Project Name", w: 180, max: 320, v: (p) => p.Project_Title || "" },
+  { k: "ver", h: "Version", w: 80, v: (p) => p.Version?.name || "" },
+  { k: "prop", h: "Proposal ID", w: 84, v: (p) => dealOf(p)?.Proposal_Number || "" },
+  { k: "status", h: "Status", w: 100, v: (p) => p.Project_Status || "", f: (x) => pill(x) },
+  { k: "awarded", h: "Awarded", w: 66, v: (p) => p.Award_Date || d10(p.Created_Time), f: fmtD },
+  { k: "cv", h: "Contract Value", num: 1, w: 90, v: (p) => num(p.Contract_Value), f: money, total: "sum" },
+];
+function renderProjectList() {
+  const items = S.allProjects.filter((p) => matches(p.Name, clientOf(p), p.Proposal?.name, p.Project_Status)).map((p) => ({ r: p }));
+  if (!S.sort.j) S.sort.j = { k: "num", d: -1 };
+  $("#main").innerHTML = `
+    <div class="figs"><b>Placeholder</b><span class="muted">Projects are kept in Zoho's own Project module: status, milestones and billing are edited there. Click a row to open the project in Zoho. A project screen like the proposal one can be added here later.</span></div>
+    ${grid("j", JCOLS, items, { open: "project", empty: S.allProjects.length ? "No project matches." : "No projects yet. A project is created when a version is accepted." })}`;
+}
+
+// ---------- Pipeline: one plain question, one summary table with a Group by switch ----------
+const monthOf = (s) => (s ? d10(s).slice(0, 7) : "(no date)");
+function reportDefs() {
+  const deals = S.deals.map((d) => ({ d, i: propInfo(d) }));
+  return {
+    pipeline: {
+      q: "What is open, and what is it worth?",
+      how: "One row per open proposal (every status except DVT Won, lost, Abandoned and Cancelled). Its value is the highest version price, counted once; versions are never added together. Value = the Estimated Proposal Value when typed, else the highest version price. Weighted = value × the probability Zoho gives the status (Open drops to 15% after 45 days).",
+      items: deals.filter((x) => x.i.open),
+      groups: { status: { h: "Status", f: (x) => x.d.Stage }, pm: { h: "DVT PM", f: (x) => x.d.Owner?.name }, client: { h: "Client", f: (x) => x.d.Account_Name?.name }, month: { h: "Due month", f: (x) => monthOf(x.d.Closing_Date), sort: 1 } },
+      metrics: [
+        { h: "Proposals", v: (xs) => xs.length },
+        { h: "Pipeline Value", f: money, v: (xs) => sumOf(xs, (x) => x.i.pipeline) },
+        { h: "Weighted", f: money, v: (xs) => sumOf(xs, (x) => x.i.weighted) },
+        { h: "Avg Days Open", v: (xs) => { const a = avgOf(xs, (x) => x.i.daysOpen); return a == null ? null : Math.round(a); } },
+        { h: "Over 45 Days", v: (xs) => xs.filter((x) => x.i.daysOpen > 45).length || null },
+      ],
+      detail: (xs) => grid("rp", PCOLS, xs.map((x) => ({ r: x.d, i: x.i })), { open: "proposal", empty: "No open proposals." }),
+    },
+  };
+}
+function renderReports() {
+  const R = reportDefs().pipeline;
+  const gk = S.rgroup.pipeline && R.groups[S.rgroup.pipeline] ? S.rgroup.pipeline : Object.keys(R.groups)[0];
+  const g = R.groups[gk];
+  const items = R.items.filter((x) => matches(x.d.Proposal_Number, x.d.Account_Name?.name, x.d.Deal_Name, x.d.Contact_Name?.name));
+  const map = new Map();
+  for (const it of items) { const k = g.f(it) || "(blank)"; if (!map.has(k)) map.set(k, []); map.get(k).push(it); }
+  const groups = [...map.entries()].sort((a, b) => (g.sort ? cmp(a[0], b[0]) : (R.metrics[1].v(b[1], items) || 0) - (R.metrics[1].v(a[1], items) || 0)));
+  const cell = (m, xs) => { const x = m.v(xs, items); return `<td class="num">${x == null ? "" : m.f ? m.f(x) : x}</td>`; };
+  $("#main").innerHTML = `
+    <section><h2>${esc(R.q)} <span class="r"><span class="muted">Group by</span><span class="tabs">${Object.entries(R.groups).map(([k, x]) => `<button data-rgroup="${k}" class="${k === gk ? "on" : ""}">${esc(x.h)}</button>`).join("")}</span></span></h2>
+      <details class="how"><summary>How this is counted</summary>${esc(R.how)}</details>
+      <table><tr><th>${esc(g.h)}</th>${R.metrics.map((m) => `<th class="num">${m.h}</th>`).join("")}</tr>
+        ${groups.map(([k, xs]) => `<tr><td>${esc(k)}</td>${R.metrics.map((m) => cell(m, xs)).join("")}</tr>`).join("") || `<tr><td colspan="9" class="empty">Nothing to count yet.</td></tr>`}
+        ${groups.length ? `<tr class="tot" style="font-weight:600;background:#f7f8fa"><td>Total</td>${R.metrics.map((m) => cell(m, items)).join("")}</tr>` : ""}</table>
+    </section>
+    <section><h2>The records behind it <span class="muted">${items.length} · click a row to open it</span></h2>${R.detail(items)}</section>`;
+}
+
+// ---------- the bar and switching between screens ----------
+function drawBar() {
+  const m = S.mode, list = S.view === "list";
+  document.querySelectorAll("#modes button").forEach((b) => b.classList.toggle("on", b.dataset.mode === m));
+  $("#bar-list").style.display = list ? "flex" : "none";
+  $("#bar-rec").style.display = list ? "none" : "flex";
+  $("#q").style.display = m === "home" ? "none" : "";
+  $("#only-w").style.display = m === "proposals" ? "" : "none";
+  $("#new").style.display = m === "proposals" ? "" : "none";
+  if (m !== "proposals" || !list) $("#newform").style.display = "none";
+  $("#only").checked = S.only.proposals;
+  $("#back").textContent = S.view === "quote" ? "← Back to the proposal" : "← All proposals";
+  if (!list) $("#rec-title").textContent = S.deal ? `${S.deal.Proposal_Number || ""} · ${S.deal.Account_Name?.name || ""} · ${S.deal.Deal_Name || ""}` : "";
+}
+function draw() {
+  drawBar();
+  if (S.view === "quote") return renderQuotation();
+  if (S.view === "list") return ({ home: renderHome, proposals: renderProposalList, projects: renderProjectList, reports: renderReports })[S.mode]();
+  return renderProposal();
+}
+// redraw without losing the box you are in: an unsaved box waits until you leave it; a fresh box gets its focus back
+let pending = false;
+function paint() {
+  const a = document.activeElement;
+  const busy = a?.tagName === "TEXTAREA" ? !!a.value : a?.matches?.("input:not([type=checkbox]):not([type=radio]),select") && a.value !== (a.dataset.was ?? a.value);
+  if (busy && a.closest("#main")) { pending = true; return; }
+  const key = a?.matches?.("[data-f]") && a.closest("#main") ? `[data-m="${a.dataset.m}"][data-id="${a.dataset.id}"][data-f="${a.dataset.f}"]` : null;
+  let caret = null;
+  try { caret = key && a.selectionStart != null ? [a.selectionStart, a.selectionEnd] : null; } catch (e) { caret = null; }
+  pending = false;
+  draw();
+  const el = key && document.querySelector(key);
+  if (el) { el.focus(); try { if (caret) el.setSelectionRange(caret[0], caret[1]); } catch (e) { /* date boxes have no caret */ } }
+}
+// saves of the last few seconds: a refresh that left Zoho before them must not put the old value back on screen
+const recent = [];
+// the same for records added or deleted a moment ago: a refresh already on its way must not drop or bring them back
+const added = [], gone = new Map();
+function keepAddsAndDeletes() {
+  const now = Date.now();
+  for (let i = added.length - 1; i >= 0; i--) if (now - added[i].at > 30000) added.splice(i, 1);
+  for (const [id, at] of gone) if (now - at > 30000) gone.delete(id);
+  const fix = (list, m) => { const out = list.filter((x) => !gone.has(x.id)); for (const a of added) if (a.m === m && !out.some((x) => x.id === a.rec.id)) out.push(a.rec); return out; };
+  S.versions = fix(S.versions, VER).filter((v) => v.Proposal?.id === S.deal?.id).sort(byVer);
+  S.quotes = fix(S.quotes, QUO).filter((q) => q.Proposal?.id === S.deal?.id);
+  S.allVersions = fix(S.allVersions, VER); S.allQuotes = fix(S.allQuotes, QUO);
+}
+function reapply() {
+  const now = Date.now();
+  for (let i = recent.length - 1; i >= 0; i--) if (now - recent[i].at > 20000) recent.splice(i, 1);
+  for (const r of recent) { const rec = recOf(r.m, r.id); if (rec) Object.assign(rec, r.data); }
+}
+async function refreshLists(force) {
+  if (!force && Date.now() - S.lastLoad < 60000) return; // loaded in the last minute: the copy here is fresh enough
+  const tok = ++S.ltok;
+  say("Refreshing…");
+  await loadLists();
+  if (tok !== S.ltok) return;
+  if (S.view === "list") paint();
+  say(`Up to date · ${time()} · ${S.loadSecs}s`);
+}
+function showList(mode) {
+  if (S.mode !== mode) { S.q = ""; $("#q").value = ""; }
+  S.mode = mode; S.view = "list";
+  draw();
+  refreshLists();
+}
+async function openDeal(id) {
+  if (S.deal?.id !== id) { S.award = new Set(); S.sure = null; S.history = []; S.notes = []; S.histFor = null; S.picked = null; S.numTries = 0; }
+  S.mode = "proposals"; S.view = "record";
+  const cached = S.deals.find((d) => d.id === id);
+  if (cached) { // draw at once from the copy here; Zoho's latest follows
+    S.deal = cached; S.versions = S.allVersions.filter((v) => v.Proposal?.id === id).sort(byVer);
+    S.quotes = S.allQuotes.filter((q) => q.Proposal?.id === id); S.projects = S.allProjects.filter((p) => p.Proposal?.id === id);
+    pickDefault(); draw();
+  } else { S.deal = null; drawBar(); $("#main").innerHTML = `<div class="empty">Loading…</div>`; }
+  await fetchDeal(id);
+}
+function pickDefault() { if (!S.versions.some((v) => v.id === S.picked)) S.picked = S.versions[S.versions.length - 1]?.id ?? null; }
+async function fetchDeal(id, full = true) {
+  const tok = ++S.tok; // a later click wins: an older, slower load must not draw over it
+  say("Refreshing…");
+  const [deal, versions, quotes, projects] = await Promise.all([
+    ZOHO.CRM.API.getRecord({ Entity: "Deals", RecordID: id }).then((r) => normalize("Deals", rows(r)[0])),
+    related(VER, id), related(QUO, id), related(PROJ, id).catch(() => []),
+  ]);
+  if (tok !== S.tok || !deal) { if (!deal && tok === S.tok) say("This proposal could not be loaded", true); return; }
+  const have = new Set(versions.map((v) => v.id));
+  for (const vid of (deal.Proposal_Services_Scope || []).map((r) => r.P_Version?.id).filter((x) => x && !have.has(x))) {
+    const v = rows(await ZOHO.CRM.API.getRecord({ Entity: VER, RecordID: vid }).catch(() => null))[0];
+    if (v) versions.push(normalize(VER, v));
+  }
+  // keep the lists in step with what was just loaded
+  const swap = (list, fresh, key) => list.filter((x) => x[key]?.id !== id).concat(fresh);
+  const i = S.deals.findIndex((x) => x.id === id);
+  if (i >= 0) S.deals[i] = deal; else S.deals.unshift(deal);
+  S.allVersions = swap(S.allVersions, versions, "Proposal"); S.allQuotes = swap(S.allQuotes, quotes, "Proposal"); S.allProjects = swap(S.allProjects, projects, "Proposal");
+  if (S.mode !== "proposals" || S.deal?.id !== id && S.deal) return saveCacheSoon();
+  S.deal = deal; S.versions = versions.sort(byVer); S.quotes = quotes; S.projects = projects;
+  keepAddsAndDeletes();
+  reapply();
+  pickDefault(); paint(); saveCacheSoon();
+  if (!deal.Proposal_Number && (S.numTries = (S.numTries || 0) + 1) < 4) refreshSoon(2500); // the number comes from Zoho's script a moment after Create
+  say("Saved in Zoho as you type · " + time());
+  if (S.history.length && S.histFor === id && !full) return;
+  // then, behind it: status history, notes, the Client's PM list and the vendors' contacts (for the quote-request emails)
+  const [history, notes] = await Promise.all([rel("Deals", id, "Stage_History"), rel("Deals", id, "Notes")]);
+  if (tok !== S.tok) return;
+  S.histFor = id;
+  S.history = (history || []).sort((a, b) => cmp(b.Last_Modified_Time || b.Modified_Time || b.Created_Time, a.Last_Modified_Time || a.Modified_Time || a.Created_Time));
+  S.notes = (notes || []).sort((a, b) => cmp(b.Created_Time, a.Created_Time));
+  paint();
+  const accs = [deal.Account_Name?.id, ...new Set(quotes.map((q) => q.Vendor?.id))].filter((x) => x && !S.contacts[x]);
+  if (accs.length) { await Promise.all(accs.map((a) => contactsOf(a))); if (tok === S.tok) paint(); }
+}
+let refreshTimer = null;
+function refreshSoon(ms = 2500) {
+  // Zoho's scripts (numbering, margin, the one-selected rule) finish a moment after a save: pick their result up quietly
+  clearTimeout(refreshTimer);
+  const id = S.deal?.id;
+  refreshTimer = setTimeout(() => { if (S.deal?.id === id && S.mode === "proposals" && S.view !== "list") fetchDeal(id, false); }, ms);
+}
+// ---------- building blocks for the record screens ----------
+const fld = (label, html, title, cls = "") => `<div class="f ${cls}"${title ? ` title="${esc(title)}"` : ""}><label>${label}</label><div class="v">${html}</div></div>`;
+const calc = (v, isNum, cls = "") => `<span class="calc${isNum ? " num" : ""} ${cls}">${v === "" || v == null ? "&nbsp;" : v}</span>`;
+const inp = (m, id, f, value, kind, list) => kind === "date"
+  ? `<input type="date" data-m="${m}" data-id="${id}" data-f="${f}" value="${value ?? ""}">`
+  : kind === "num" || kind === "int"
+    ? `<input class="num" data-m="${m}" data-id="${id}" data-f="${f}" data-k="${kind}" value="${value ?? ""}">`
+    : kind === "bool"
+      ? `<input type="checkbox" data-m="${m}" data-id="${id}" data-f="${f}" data-k="bool" ${value ? "checked" : ""}>`
+      : `<input data-m="${m}" data-id="${id}" data-f="${f}" value="${esc(value)}"${list ? ` list="${list}" placeholder="type or pick"` : ""}>`;
+const sel = (m, id, f, value, options, blank = true) => `<select data-m="${m}" data-id="${id}" data-f="${f}">${blank ? `<option value=""${value ? "" : " selected"}></option>` : ""}${options.map((o) => `<option${o === value ? " selected" : ""}>${esc(o)}</option>`).join("")}${value && !options.includes(value) ? `<option selected>${esc(value)}</option>` : ""}</select>`;
+// a lookup chosen from a short list of records (value = the record id)
+const selId = (m, id, f, current, options) => `<select data-m="${m}" data-id="${id}" data-f="${f}" data-k="lookup"><option value=""></option>${options.map((o) => `<option value="${o.id}"${o.id === current?.id ? " selected" : ""}>${esc(o.name)}</option>`).join("")}</select>`;
+// several values ticked from a Zoho list (multi-select field)
+const ticks = (m, id, f, vals, options) => `<span class="ticks">${options.map((o) => `<label class="chk"><input type="checkbox" data-multi="1" data-m="${m}" data-id="${id}" data-mf="${esc(f)}" value="${esc(o)}" ${(vals || []).includes(o) ? "checked" : ""}> ${esc(o)}</label>`).join("")}</span>`;
+// a type-to-search list (clickable inside Zoho's frame, unlike a native dropdown) that saves a lookup
+const lookupPick = (kind, acc, m, id, f, current, placeholder) => `<span class="pick"><input data-pick="${kind}" data-acc="${acc || ""}" data-act="set" data-pm="${m}" data-pid="${id}" data-pf="${f}" value="${esc(current?.name || "")}" placeholder="${placeholder}" autocomplete="off"><div class="opts"></div></span>`;
+const zohoBtn = (ent, id, what = "Open in Zoho: attachments, notes, history") => `<button class="ico" data-zoho="${id}" data-ent="${ent}" title="${what}">↗</button>`;
+
+// ---------- one proposal ----------
+function gmail(to, subject, body) { return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to || "")}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; }
+function requestMail(q, v) {
+  const d = S.deal, acq = q.Quote_Type === "Acquisition";
+  const people = S.contacts[q.Vendor?.id] || [];
+  const contact = people.find((c) => c.DV_Primary && c.Email) || people.find((c) => c.Email) || null; // the vendor's primary contact
+  const line = (label, x) => (x == null || x === "" || (Array.isArray(x) && !x.length) ? "" : `${label}: ${Array.isArray(x) ? x.join(", ") : x}\n`);
+  const body = `Hi ${contact?.First_Name || "team"},\n\nDroneView would like a ${acq ? "data acquisition" : "mapping"} quote for the project below.\n\n` +
+    line("Project", `${d.Deal_Name}${d.City ? ", " + d.City : ""}`) + line("Our reference", `${d.Proposal_Number}${verLabel(v)}`) + line("Scope", v.Name) +
+    line("Mapping acres", v[V.acres]) +
+    `\nPlease include the cost, ${acq ? "frame count and the sensor you would fly" : "turnaround days"}, and how long the quote is valid.\n\nThank you,\n${d.Owner?.name || ""}\nDroneView Technologies`;
+  return gmail(contact?.Email || "", `Quote request: ${d.Deal_Name} (${d.Proposal_Number}${verLabel(v)})`, body);
+}
+// with several versions ticked the client may want one project for all of them, or a project for each (P-<number>.1, .2)
+// accepting marks the ticked versions Selected and closes the proposal as DVT Won: Zoho makes one project per Selected version
+function acceptButtons(ids, total) {
+  const labels = ids.map((id) => verLabel(S.versions.find((v) => v.id === id))).join(" + ");
+  return `<button class="green" data-acceptmany="each" ${ids.length ? "" : "disabled title='Tick the versions the client awarded'"} title="DVT Won: a project for each ticked version; the others become Not Selected">${S.sure === "many:each" ? `Confirm: ${labels} · ${money(total)}` : `Accept ticked${ids.length ? ` ${labels} · ${money(total)}` : ""}`}</button>`;
+}
+function renderProposal() {
+  const d = S.deal;
+  if (!d) { $("#main").innerHTML = `<div class="empty">This proposal could not be loaded.</div>`; return; }
+  const won = d.Stage === "DVT Won";
+  const accepted = S.versions.filter((v) => v[V.accepted]);
+  const projects = S.projects.length ? S.projects : S.allProjects.filter((p) => p.Proposal?.id === d.id);
+  const project = projects[0];
+  const info = propInfo(d, S.versions); // this proposal's versions as just loaded, not the list's copy
+  const multi = !won && !project && S.versions.length > 1; // several versions: tick the ones the client awards (a project each)
+  const awardIds = S.versions.filter((v) => S.award.has(v.id)).map((v) => v.id);
+  const addonDeals = S.deals.filter((x) => x.Parent_Project && projects.some((p) => p.id === x.Parent_Project.id)); // add-on proposals on this one's project(s)
+  const awardTotal = sumOf(S.versions.filter((v) => S.award.has(v.id)), (v) => num(v[V.price]));
+  const vRows = S.versions.map((v) => {
+    const c = verCalc(v, S.quotes);
+    return `<tr class="click${v.id === S.picked ? " sel" : ""}" data-v="${v.id}">
+      ${multi ? `<td style="text-align:center"><input type="checkbox" data-award="${v.id}" ${S.award.has(v.id) ? "checked" : ""} ${v[V.price] ? "" : "disabled title='Type the price first'"}></td>` : ""}
+      <td><b>${esc(fullVer(v))}</b></td>
+      <td>${inp(VER, v.id, "Name", v.Name)}</td>
+      <td class="num">${inp(VER, v.id, V.price, v[V.price], "num")}</td>
+      <td class="num">${inp(VER, v.id, V.acres, v[V.acres], "num")}</td>
+      <td class="num">${c.price != null && !num(v[V.acres]) ? '<span class="muted" title="Type the Mapping Acres: $/acre and the quotes\' cost per acre are worked out from it">acres?</span>' : rate(c.perAcre)}</td>
+      <td class="num">${money(c.acq)}</td>
+      <td class="num">${money(c.map)}</td>
+      <td class="num">${inp(VER, v.id, "Internal_Cost", v.Internal_Cost, "num")}</td>
+      <td class="num">${money(c.cost)}</td>
+      <td class="num"><b>${money(c.cm)}</b></td>
+      <td class="num">${pct(c.cmPct)}</td>
+      <td>${S.quotes.filter((q) => q.Version?.id === v.id).length || ""}</td>
+      ${multi ? "" : `<td>${v[V.accepted] ? pill("Accepted") : won || project ? "" : S.sure === v.id ? `<button class="green" data-accept="${v.id}">Confirm: ${money(v[V.price])}</button>` : `<button class="green" data-accept="${v.id}" ${v[V.price] ? "" : "disabled title='Type the price first'"}>Accept</button>`}</td>`}
+      <td style="text-align:center">${v[V.accepted] ? "" : S.sure === "delv:" + v.id ? `<button class="red" data-delv="${v.id}" title="Deletes this version and its quotes">Delete?</button>` : `<button class="ico" data-delv="${v.id}" title="Delete this version (and its quotes)">✕</button>`}</td>
+    </tr>`;
+  }).join("");
+
+  const picked = S.versions.find((v) => v.id === S.picked);
+  const acres = picked ? num(picked[V.acres]) : null;
+  const qStatuses = picklist(QUO, "Quote_Status");
+  const vendorsHere = [];
+  const lists = vendorsHere.map((vid) => {
+    const sens = S.allSensors.filter((s) => s.Vendor?.id === vid), locs = S.allLocations.filter((l) => l.Vendor?.id === vid);
+    const usual = [...document.querySelectorAll("#sensors option")].map((o) => o.value).filter((n) => !sens.some((s) => s.Name === n));
+    return `<datalist id="sen-${vid}">${sens.map((s) => `<option value="${esc(s.Name)}">${esc([s.Sensor_Type, s.Manufacturer, s.Model].filter(Boolean).join(" · ") || "this vendor's sensor")}</option>`).join("")}${usual.map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
+      <datalist id="loc-${vid}">${locs.map((l) => `<option value="${esc(l.Name)}">${esc([l.City, l.State, l.Radius_Miles ? l.Radius_Miles + " mi" : ""].filter(Boolean).join(", "))}</option>`).join("")}</datalist>`;
+  }).join("");
+  const quoteTable = (type) => {
+    const acq = type === "Acquisition";
+    const list = S.quotes.filter((q) => q.Version?.id === S.picked && q.Quote_Type === type).sort((a, b) => cmp(a.Created_Time || "9", b.Created_Time || "9")); // oldest first, always in the same order
+    const totals = list.filter((q) => !DECLINED.includes(q.Quote_Status)).map(qTotal).filter((x) => x != null);
+    const low = totals.length > 1 ? Math.min(...totals) : null;
+    const head = `<th style="width:52px;text-align:center">Selected</th><th style="min-width:150px">Vendor</th><th style="min-width:80px">Quote ID</th>${acq ? '<th style="min-width:150px" title="The vendor\'s sensors (Acqs Vendor Sensor records)">Sensor</th>' : ""}
+      <th class="num" style="width:80px">Cost</th><th class="num" style="width:64px" title="Cost ÷ Mapping Acres of this version">Cost $/Acre</th>
+      ${acq ? '<th class="num" style="width:56px">Frame Count</th>' : '<th class="num" style="width:44px" title="Estimated project days">Days</th>'}
+      <th style="width:112px">Quote Date</th><th style="width:112px">Expiry</th><th style="width:120px">Status</th><th style="width:50px" title="Email the vendor a quote request (Gmail, filled in from this version)">Request</th><th style="width:24px" title="Open the quote in Zoho (attach the vendor's PDF there)"></th><th style="width:30px"></th>`;
+    const body = list.length ? list.map((q) => {
+      const t = qTotal(q);
+      const expired = q.Expiry && q.Expiry < today;
+      const vid = q.Vendor?.id;
+      return `<tr>
+        <td style="text-align:center"><input type="radio" name="sel-${type}" data-select="${q.id}" ${q.Selected ? "checked" : ""} ${won ? "disabled" : ""} title="The quote DroneView would use: its total feeds the margin"></td>
+        <td>${q.Selected ? "<b>" : ""}${vid ? `<button class="link" style="font-weight:inherit;text-decoration:none;color:inherit" data-gocompany="${vid}" title="Open the vendor in Zoho (Accounts)">${esc(q.Vendor?.name || "")}</button>` : ""}${q.Selected ? "</b>" : ""}</td>
+        <td class="muted">${esc(q.Vendor_Quote_ID || "")}</td>
+        ${acq ? `<td>${selId(QUO, q.id, "Acquisition_Sensor", q.Acquisition_Sensor, S.allSensors.filter((s) => s.Vendor?.id === vid).map((s) => ({ id: s.id, name: s.Name })))}</td>` : ""}
+        <td class="num ${low != null && t === low ? "low" : ""}" ${low != null && t === low ? 'title="Lowest cost"' : ""}>${inp(QUO, q.id, "Cost", q.Cost, "num")}</td>
+        <td class="num">${t != null && acres ? rate(t / acres) : t != null ? '<span class="muted" title="Type the Mapping Acres of this version">acres?</span>' : ""}</td>
+        ${acq ? `<td class="num">${inp(QUO, q.id, "Frame_Count", q.Frame_Count, "int")}</td>` : `<td class="num">${inp(QUO, q.id, "Turnaround_Days", q.Turnaround_Days, "int")}</td>`}
+        <td>${inp(QUO, q.id, "Quote_Date", q.Quote_Date, "date")}</td>
+        <td class="${expired ? "red" : ""}" ${expired ? 'title="This quote has expired"' : ""}>${inp(QUO, q.id, "Expiry", q.Expiry, "date")}</td>
+        <td>${sel(QUO, q.id, "Quote_Status", q.Quote_Status, qStatuses.length ? qStatuses : QUOTE_STATUSES)}</td>
+        <td style="text-align:center"><a class="mail" href="${esc(requestMail(q, picked))}" target="_blank" rel="noopener" title="Gmail opens with the request filled in">✉ Email</a></td>
+        <td style="text-align:center">${zohoBtn(QUO, q.id)}</td>
+        <td style="text-align:center">${won && q.Selected ? "" : S.sure === "delq:" + q.id ? `<button class="red" data-delq="${q.id}">Delete?</button>` : `<button class="ico" data-delq="${q.id}" title="Delete this quote">✕</button>`}</td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="16" class="empty">No ${acq ? "data acquisition" : "mapping"} quotes for ${picked ? "version " + esc(fullVer(picked)) : "this version"} yet. Type a vendor in "+ Quote" to add one.</td></tr>`;
+    const nSel = list.find((q) => q.Selected);
+    return `<section><h2>${acq ? "Data Acquisition Quotes" : "Mapping Quotes"} <span class="muted">version ${picked ? esc(fullVer(picked)) : ""} · ${list.length} ${list.length === 1 ? "quote" : "quotes"}${nSel ? ` · selected: ${esc(nSel.Vendor?.name || "")} ${money(qTotal(nSel))}` : ""}${low != null ? ` · lowest ${money(low)}` : ""}${won ? " · <b>Won: the selection is locked</b> (it was copied to the project)" : ""}</span>
+      <span class="r">${won || !picked ? "" : `<span class="pick inline"><input data-pick="companies" data-act="newquote:${type}" placeholder="+ Quote: type a vendor" autocomplete="off"><div class="opts"></div></span>`}</span></h2>
+      <div class="qscroll"><table><tr>${head}</tr>${body}</table></div></section>`;
+  };
+
+  const histRows = S.history.map((h) => `<tr><td>${fmtD(d10(h.Last_Modified_Time || h.Modified_Time || h.Created_Time))}</td><td>${pill(stageName(h.Stage))}</td><td class="num">${money(h.Amount)}</td><td>${esc(h.Modified_By?.name || h.Created_By?.name || "")}</td></tr>`).join("");
+  const notes = S.notes.map((n) => `<div class="note">${esc(n.Note_Content || n.Note_Title || "")}<div class="muted">${fmtD(d10(n.Created_Time))} · ${esc(n.Owner?.name || n.Created_By?.name || "")}</div></div>`).join("");
+  $("#main").innerHTML = `
+  ${lists}
+  <section><h2>Opportunity ${pill(d.Stage)}<span class="muted">${esc(d.Proposal_Number || "")}</span><span class="r">${projects.map((p) => `<button data-addon="${p.id}" title="More work for this client on ${esc(p.Name)}: a new proposal (Opportunity Type Add On), priced like any other; accepting it makes ${esc(p.Name)}-1, -2">+ Add-on${projects.length > 1 ? " to " + esc(p.Name) : " proposal"}</button>`).join("")}${zohoBtn("Deals", d.id, "Open the Deal in Zoho: emails, attachments, timeline")}</span></h2>
+    <div class="grid">
+      ${fld("Proposal ID", calc(esc(d.Proposal_Number || "")))}
+      ${fld("Project Name", inp("Deals", d.id, "Deal_Name", d.Deal_Name))}
+      ${fld("Client", d.Account_Name ? `<button class="link" data-gocompany="${d.Account_Name.id}" title="Open the company in Zoho (Accounts)">${esc(d.Account_Name.name)}</button>` : calc(""))}
+      ${fld("Client's PM", d.Account_Name ? lookupPick("contacts", d.Account_Name.id, "Deals", d.id, "Contact_Name", d.Contact_Name, "pick a contact") : calc(""))}
+      ${fld("Opportunity Status", won ? calc("DVT Won") : sel("Deals", d.id, "Stage", d.Stage, STATUSES, false), "DVT Won comes only from Accept on the versions")}
+      ${fld("Probability", calc(info.prob != null ? info.prob + "%" : "", true))}
+      ${fld("Pipeline Value", calc(money(info.pipeline), true), "Open proposals: the highest version price, counted once")}
+      ${fld("Weighted", calc(money(info.weighted), true))}
+      ${fld("City", inp("Deals", d.id, "City", d.City))}
+      ${fld("Opportunity Type", calc(esc(d.Opportunity_Type || "")))}
+      ${d.Parent_Project ? fld("Parent Project", `<button class="link" data-goproject="${d.Parent_Project.id}">${esc(d.Parent_Project.name)}</button>`, "This is an add-on: accepting it makes the parent's next -01, -02 project. Click to open the parent project in Zoho") : ""}
+      ${fld("Request Date", calc(fmtD(d.Proposal_Request_Date)))}
+      ${fld("Due Date", inp("Deals", d.id, "Closing_Date", d.Closing_Date, "date"), "Proposal Due Date")}
+      ${fld("DVT PM", calc(esc(d.Owner?.name || "")))}
+      ${fld("Latest Follow Up", inp("Deals", d.id, "DV_Latest_Follow_Up", d.DV_Latest_Follow_Up, "date"), "Filled in when you add a note")}
+      ${fld("Next Follow Up", inp("Deals", d.id, "DV_Next_Follow_Up", d.DV_Next_Follow_Up, "date"), "The proposal shows on Home from this date")}
+      ${fld("Days Open", calc(info.daysOpen ?? "", true, info.daysOpen > 45 ? "amber" : ""), "Over 45 days open counts at a lower probability")}
+      ${fld("Estimated Value", inp("Deals", d.id, "Amount", d.Amount, "num"), "Estimated Proposal Value: the pipeline value while the proposal is open")}
+      ${fld("Final Value", calc(money(d.Final_Proposal_Value), true), "Set at DVT Won: the Selected versions' value added up")}
+      ${fld("DVT Project #", projects.length ? projects.map((x) => `<button class="link" data-goproject="${x.id}" title="Open the project in Zoho">${esc(x.Name)}</button>`).join(" ") + (projects.length === 1 ? ` <span class="muted">${esc(project.Project_Status || "")}</span>` : "") : calc('<span class="muted">created when versions are accepted</span>'))}
+      ${addonDeals.length ? fld("Add-ons", addonDeals.map((x) => `<button class="link" data-goproposal="${x.id}">${esc(x.Proposal_Number || "(new)")}</button> ${pill(x.Stage)}`).join(" "), "Add-on proposals on this proposal's project") : ""}
+    </div>
+  </section>
+  <section><h2>Versions <span class="muted">options for one award, never added together · click a row to see its quotes${multi ? " · tick the versions the client awards, then Accept: DVT Won, a project for each" : ""}</span>
+    <span class="r">${accepted.length ? pill("Won · Accepted " + accepted.map(verLabel).join(" + ")) : ""}
+      ${multi ? acceptButtons(awardIds, awardTotal) : ""}
+      ${S.versions.length ? '<button id="quotation" title="The client quotation: print it or save it as a PDF; never shows costs">Quotation</button>' : ""}
+      ${won || project ? "" : '<button id="addv">+ Version</button>'}</span></h2>
+    <table><tr>${multi ? '<th style="width:46px" title="Awarded by the client">Award</th>' : ""}<th style="width:92px" title="Version ID: the proposal number and the version">Version ID</th><th>Title</th><th class="num" style="width:100px">Proposal Total</th><th class="num" style="width:84px">Mapping Acres</th><th class="num" style="width:70px">$/Acre</th><th class="num" style="width:84px" title="Selected acquisition quote">Acq Cost</th><th class="num" style="width:84px" title="Selected mapping quote">Mapping Cost</th><th class="num" style="width:84px" title="DroneView's own cost on this version">Internal Cost</th><th class="num" style="width:90px" title="Proposal Version Cost = selected acquisition + selected mapping + internal cost">Version Cost</th><th class="num" style="width:104px" title="Proposal Total − Version Cost">Contribution Margin</th><th class="num" style="width:56px">CM %</th><th style="width:52px">Quotes</th>${multi ? "" : '<th style="width:120px"></th>'}<th style="width:30px"></th></tr>
+    ${vRows || `<tr><td colspan="15" class="empty">No versions yet. Click + Version.</td></tr>`}</table>
+  </section>
+  ${quoteTable("Acquisition")}
+  ${quoteTable("Mapping")}
+  <div class="two">
+    <section><h2>Notes and follow-ups <span class="muted">a note sets Latest Follow Up to today</span></h2>
+      <div style="display:flex;gap:4px;padding:4px 6px"><textarea id="note-text" placeholder="What happened: call, email, client feedback…"></textarea><button id="add-note" style="align-self:flex-end">Add note</button></div>
+      ${notes || `<div class="empty">No notes yet.</div>`}
+    </section>
+    <section><h2>Status history <span class="muted">kept by Zoho</span></h2>
+      ${mini(`<tr><th>Date</th><th>Status</th><th class="num">Amount</th><th>By</th></tr>`, histRows, "No changes yet.")}
+    </section>
+  </div>`;
+}
+
+// ---------- the client quotation: printable, save as PDF from the print box; never shows costs ----------
+function renderQuotation() {
+  const d = S.deal;
+  if (!d) return;
+  const accepted = S.versions.filter((v) => v[V.accepted]);
+  const vs = S.award.size ? S.versions.filter((v) => S.award.has(v.id)) : accepted.length ? accepted : S.versions;
+  const pm = (S.contacts[d.Account_Name?.id] || []).find((c) => c.id === d.Contact_Name?.id);
+  const size = (v) => (v[V.acres] ? `${Number(v[V.acres]).toLocaleString("en-US")} acres` : "");
+  $("#main").innerHTML = `<div class="letter">
+    <div class="noprint" style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><button class="green" id="print">Print / Save as PDF</button>
+      <span class="muted">${S.award.size ? "The versions ticked for award." : accepted.length ? "The accepted versions." : "Every version: tick Award on the proposal to quote only some."} Costs and margins never appear here.</span></div>
+    <h1>DroneView Technologies</h1><div class="muted">Aerial mapping, LiDAR and survey</div>
+    <h2 style="font-size:15px;margin:18px 0 6px">Quotation ${esc(d.Proposal_Number || "")}</h2>
+    <table class="meta" style="width:auto"><tr><td class="muted">Date</td><td>${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</td></tr>
+      <tr><td class="muted">Client</td><td>${esc(d.Account_Name?.name || "")}</td></tr>
+      <tr><td class="muted">Attention</td><td>${esc(d.Contact_Name?.name || "")}${pm?.Email ? ` · ${esc(pm.Email)}` : ""}</td></tr>
+      <tr><td class="muted">Project</td><td>${esc(d.Deal_Name || "")}${d.City ? `, ${esc(d.City)}` : ""}</td></tr></table>
+    <p>Thank you for the opportunity. We are pleased to quote the following ${vs.length > 1 ? "options; each is priced on its own and may be awarded alone or together" : "scope"}.</p>
+    <table><tr><th style="width:54px">Option</th><th>Scope</th><th>Size</th><th class="num" style="width:110px">Price</th></tr>
+      ${vs.map((v) => `<tr><td>${esc(d.Proposal_Number || "")}${esc(verLabel(v))}</td><td class="wrapc">${esc(v.Name || "")}</td><td>${esc(size(v))}</td><td class="num"><b>${money(v[V.price])}</b></td></tr>`).join("")}
+      ${vs.length > 1 ? `<tr><td colspan="3" class="muted">If every option above is awarded</td><td class="num"><b>${money(sumOf(vs, (v) => num(v[V.price])))}</b></td></tr>` : ""}</table>
+    <p><b>Validity.</b> Prices are valid for 30 days from the date above.</p>
+    <p><b>Terms.</b> Payment is due 30 days from invoice. Schedule is confirmed at award and depends on weather and airspace approval.</p>
+    <p style="margin-top:28px">${esc(d.Owner?.name || "")}<br><span class="muted">DroneView Technologies</span></p>
+  </div>`;
+}
+
+// ---------- saving: every box saves to Zoho when you leave it (Enter too); Esc puts the value back ----------
+function recOf(m, id) {
+  const f = (list) => list.find((x) => x.id === id);
+  if (m === "Deals") return S.deal?.id === id ? S.deal : f(S.deals);
+  if (m === VER) return f(S.versions) || f(S.allVersions);
+  if (m === QUO) return f(S.quotes) || f(S.allQuotes);
+  if (m === PROJ) return f(S.allProjects);
+  if (m === "Accounts") return f(S.accounts);
+  if (m === "Contacts") return f(Object.values(S.contacts).flat());
+  if (m === LOC) return f(S.allLocations);
+  if (m === SEN) return f(S.allSensors);
+  return null;
+}
+async function saveValue(m, id, f, value, local = value) {
+  const rec = recOf(m, id);
+  const data = { id, [f]: value };
+  if (m === QUO && f === "Cost" && value != null && rec && (!rec.Quote_Status || ["Not Started", "Quotes Requested"].includes(rec.Quote_Status))) data.Quote_Status = "Quotes Received"; // a quote with a cost has been received
+  const before = rec ? Object.fromEntries(Object.keys(data).map((k) => [k, rec[k]])) : null;
+  if (rec) Object.assign(rec, data, { [f]: local });
+  const mine = { m, id, data: { ...data, [f]: local }, at: Date.now() };
+  recent.push(mine);
+  setTimeout(paint, 0); // the result shows at once (margin, totals, cycle times), once the cursor is in the next box; Zoho saves behind it
+  say("Saving…");
+  const r = await ZOHO.CRM.API.updateRecord({ Entity: m, APIData: toZoho(m, data), Trigger: ["workflow"] }).catch((e) => e);
+  if (!ok(r)) { recent.splice(recent.indexOf(mine), 1); if (rec) Object.assign(rec, before); paint(); return zohoSaid(r); }
+  const box = document.querySelector(`[data-m="${m}"][data-id="${id}"][data-f="${f}"]`);
+  if (box) { box.classList.add("flash"); setTimeout(() => box.classList.remove("flash"), 700); }
+  say("Saved · " + time());
+  saveCacheSoon();
+  if (m === VER || (m === QUO && ["Cost", "Selected"].includes(f)) || f === "Stage") refreshSoon();
+}
+function save(el) {
+  const { m, id, f, k } = el.dataset;
+  let value = el.value;
+  if (k === "bool") return saveValue(m, id, f, el.checked);
+  if (k === "lookup") { const o = el.selectedOptions[0]; return saveValue(m, id, f, value || null, value ? { id: value, name: o.textContent } : null); }
+  if (k === "num" || k === "int") value = value === "" ? null : Number(String(value).replace(/[$,\s]/g, ""));
+  if ((k === "num" || k === "int") && value !== null && Number.isNaN(value)) { const typed = el.value; el.value = el.dataset.was ?? ""; return say(`"${typed}" is not a number`, true); }
+  if (k === "int" && value !== null) value = Math.round(value);
+  el.dataset.was = el.value;
+  return saveValue(m, id, f, value === "" ? null : value);
+}
+async function insert(entity, data, label) {
+  say(`Adding ${label}…`);
+  const r = await ZOHO.CRM.API.insertRecord({ Entity: entity, APIData: toZoho(entity, data), Trigger: ["workflow"] }).catch((e) => e);
+  if (!ok(r)) { zohoSaid(r); return null; }
+  say(`Added ${label} · ` + time());
+  return r.data[0].details.id;
+}
+async function acceptVersions(ids) {
+  // one save on the proposal: the ticked versions' scope rows become Selected and the status DVT Won. Zoho's proposal
+  // script then sets the versions, makes the others Not Selected, sets Final Proposal Value (the Selected versions'
+  // value) and creates one project per Selected version (with its Proposal Version, vendors and costs)
+  const dealId = S.deal.id;
+  say("Accepting… the projects are being created");
+  const deal = rows(await ZOHO.CRM.API.getRecord({ Entity: "Deals", RecordID: dealId }).catch((e) => e))[0];
+  const scope = deal?.Proposal_Services_Scope || [];
+  const linked = new Set(scope.map((r) => r.P_Version?.id));
+  if (ids.some((id) => !linked.has(id))) { say("A version is not on the proposal's scope table yet: wait a few seconds and try again", true); return refreshSoon(500); }
+  const data = { id: dealId, Stage: "DVT Won", Proposal_Services_Scope: scope.map((r) => ({ id: r.id, ...(ids.includes(r.P_Version?.id) ? { Version_Status: "Selected" } : {}) })) };
+  const r = await ZOHO.CRM.API.updateRecord({ Entity: "Deals", APIData: data, Trigger: ["workflow"] }).catch((e) => e);
+  if (!ok(r)) return zohoSaid(r);
+  S.versions.filter((v) => ids.includes(v.id)).forEach((v) => (v[V.accepted] = true));
+  S.deal.Stage = "DVT Won";
+  S.award = new Set(); S.sure = null;
+  paint();
+  const want = ids.length;
+  for (let s = 1; s <= 30; s++) { // look for the new project(s) every second instead of a fixed wait
+    await wait(1000);
+    say(`Accepting… ${s}s`);
+    const pj = await related(PROJ, dealId).catch(() => []);
+    if (pj.length >= want) break;
+  }
+  await fetchDeal(dealId);
+  refreshLists(true);
+}
+// the quote DroneView would use: one per type and version. The screen saves the whole choice itself, one step at a time,
+// and the last click wins (two Zoho scripts started by two quick clicks used to untick each other and leave none)
+const selState = {};
+function queueSelection(q, before) {
+  const k = q.Version?.id + "|" + q.Quote_Type;
+  const st = (selState[k] ||= { clear: new Set() });
+  before.forEach((id) => st.clear.add(id));
+  clearTimeout(st.t);
+  st.t = setTimeout(() => saveSelection(q.Version?.id, q.Quote_Type), 400);
+}
+async function saveSelection(verId, type) {
+  const st = selState[verId + "|" + type];
+  if (st.running) { st.again = true; return; }
+  st.running = true;
+  try {
+    const chosen = S.quotes.find((x) => x.Version?.id === verId && x.Quote_Type === type && x.Selected);
+    st.clear = new Set();
+    say("Saving…");
+    // one save on the version's quote table (every row sent, so none is dropped); Zoho's script then updates the
+    // Vendor Quotes and rolls the selected costs up to the version
+    const ver = rows(await ZOHO.CRM.API.getRecord({ Entity: VER, RecordID: verId }).catch((e) => e))[0];
+    const map = type === "Mapping";
+    const sf = map ? "Mapping_Quotes" : "Acquisition_Vendor_Quotes", flag = map ? "Is_Selected_Mapping_Vendor" : "Is_Selected_Vendor", lk = map ? "Map_Quote_ID" : "Acq_Quote_ID";
+    const table = (ver?.[sf] || []).map((row) => ({ id: row.id, [flag]: !!chosen && (row[lk]?.id === chosen.id || row.id === chosen.Subform_Row_ID) }));
+    const r = await ZOHO.CRM.API.updateRecord({ Entity: VER, APIData: { id: verId, [sf]: table }, Trigger: ["workflow"] }).catch((e) => e);
+    if (!ok(r)) return zohoSaid(r);
+    say("Saved · " + time());
+    refreshSoon(3000);
+  } finally {
+    st.running = false;
+    if (st.again) { st.again = false; saveSelection(verId, type); }
+  }
+}
+async function deleteVersion(id) {
+  const v = S.versions.find((x) => x.id === id);
+  if (!v || v[V.accepted]) return say("An accepted version can't be deleted", true);
+  say("Deleting…");
+  const deal = rows(await ZOHO.CRM.API.getRecord({ Entity: "Deals", RecordID: S.deal.id }).catch((e) => e))[0];
+  const scope = deal?.Proposal_Services_Scope || [];
+  if (scope.some((r) => r.P_Version?.id === id)) { // the proposal's scope row for this version goes first, without the scripts
+    const d = await ZOHO.CRM.API.updateRecord({ Entity: "Deals", APIData: { id: S.deal.id, Proposal_Services_Scope: scope.map((r) => (r.P_Version?.id === id ? { id: r.id, _delete: null } : { id: r.id })) }, Trigger: [] }).catch((e) => e);
+    if (!ok(d)) return zohoSaid(d);
+  }
+  for (const q of S.quotes.filter((x) => x.Version?.id === id)) { // its quotes go with it
+    const r = await ZOHO.CRM.API.deleteRecord({ Entity: QUO, RecordID: q.id }).catch((e) => e);
+    if (!ok(r)) return zohoSaid(r);
+  }
+  const r = await ZOHO.CRM.API.deleteRecord({ Entity: VER, RecordID: id }).catch((e) => e);
+  if (!ok(r)) return zohoSaid(r);
+  gone.set(id, Date.now()); S.quotes.filter((x) => x.Version?.id === id).forEach((x) => gone.set(x.id, Date.now()));
+  S.versions = S.versions.filter((x) => x.id !== id); S.allVersions = S.allVersions.filter((x) => x.id !== id);
+  S.quotes = S.quotes.filter((x) => x.Version?.id !== id); S.allQuotes = S.allQuotes.filter((x) => x.Version?.id !== id);
+  S.award.delete(id); S.sure = null; pickDefault();
+  paint(); saveCacheSoon();
+  say("Deleted version " + fullVer(v) + " · " + time());
+}
+async function deleteQuote(id) {
+  const q = S.quotes.find((x) => x.id === id);
+  if (!q) return;
+  say("Deleting…");
+  if (q.Version?.id) {
+    const ver = rows(await ZOHO.CRM.API.getRecord({ Entity: VER, RecordID: q.Version.id }).catch((e) => e))[0];
+    const map = q.Quote_Type === "Mapping", sf = map ? "Mapping_Quotes" : "Acquisition_Vendor_Quotes", lk = map ? "Map_Quote_ID" : "Acq_Quote_ID";
+    const table = ver?.[sf] || [];
+    const mine = (row) => row[lk]?.id === id || row.id === q.Subform_Row_ID;
+    if (table.some(mine)) { // with the script: it rolls the costs up again without this quote
+      const u = await ZOHO.CRM.API.updateRecord({ Entity: VER, APIData: { id: q.Version.id, [sf]: table.map((row) => (mine(row) ? { id: row.id, _delete: null } : { id: row.id })) }, Trigger: ["workflow"] }).catch((e) => e);
+      if (!ok(u)) return zohoSaid(u);
+    }
+  }
+  const r = await ZOHO.CRM.API.deleteRecord({ Entity: QUO, RecordID: id }).catch((e) => e);
+  if (!ok(r)) return zohoSaid(r);
+  gone.set(id, Date.now());
+  S.quotes = S.quotes.filter((x) => x.id !== id); S.allQuotes = S.allQuotes.filter((x) => x.id !== id); S.sure = null;
+  paint(); saveCacheSoon();
+  if (q.Selected) refreshSoon(3000);
+  say("Deleted the quote · " + time());
+}
+
+// type-to-search lists
+async function showMatches(input) {
+  const box = input.parentElement.querySelector(".opts");
+  const q = input.value.trim().toLowerCase();
+  const showAll = input.value === (input.dataset.was ?? "");
+  let list;
+  if (input.dataset.pick === "contacts") {
+    box.innerHTML = `<div class="empty">Loading…</div>`; box.style.display = "block";
+    list = (await contactsOf(input.dataset.acc)).map((c) => ({ id: c.id, name: cname(c), note: c.Title || "" }));
+  } else {
+    const vendor = String(input.dataset.act || "").startsWith("newquote");
+    const want = vendor ? "Vendor" : "Client";
+    list = S.accounts.map((a) => ({ id: a.id, name: a.Account_Name, note: types(a).join(", "), dv: types(a).includes(want) || (!vendor && types(a).includes("Prospect")) }))
+      .sort((a, b) => (b.dv ? 1 : 0) - (a.dv ? 1 : 0) || cmp(a.name, b.name));
+  }
+  const hits = list.filter((x) => showAll || !q || String(x.name).toLowerCase().includes(q)).slice(0, 40);
+  box.innerHTML = hits.length
+    ? hits.map((x) => `<button type="button" data-choose="${x.id}" data-name="${esc(x.name)}">${esc(x.name)} <span class="muted">${esc(x.note || "")}</span></button>`).join("")
+    : `<div class="empty">${input.dataset.pick === "contacts" ? "No contacts at this company yet: add them on its Account in Zoho" : "No company matches: add it in Zoho's Accounts first"}</div>`;
+  box.style.display = "block";
+}
+async function choose(btn) {
+  const box = btn.closest(".opts"), input = box.parentElement.querySelector("input");
+  box.style.display = "none";
+  const id = btn.dataset.choose, name = btn.dataset.name, act = input.dataset.act;
+  if (act === "newclient") { S.newClient = id; input.value = name; return; }
+  if (act.startsWith("newquote:")) {
+    if (S.busy) return say("Still working on the last click…");
+    S.busy = true;
+    try { await addQuote(act, id, name); } finally { S.busy = false; }
+    return;
+  }
+  if (act === "set") {
+    const { pm, pid, pf } = input.dataset;
+    input.value = name; input.dataset.was = name;
+    return saveValue(pm, pid, pf, id, { id, name });
+  }
+}
+async function addQuote(act, id, name) {
+  {
+    const type = act.split(":")[1];
+    const pv = S.versions.find((v) => v.id === S.picked);
+    // Zoho's script adds the quote to the version's Acquisition / Mapping table and gives it its AQ / MQ number
+    const data = { Name: `${fullVer(pv)} | ${type} | ${name}`, Vendor: id, Quote_Type: type, Version: S.picked, Proposal: S.deal.id, Proposal_Version_ID: fullVer(pv), Sync_Status: "Active", Quote_Status: "Quotes Requested", Quote_Date: today };
+    const box = document.activeElement;
+    if (box?.dataset?.pick) { box.value = ""; box.dataset.was = ""; box.blur(); } // the picker closes so the new row shows at once
+    refreshSoon(4000); // the quote's number and its table row come from Zoho's scripts
+    const qid = await insert(QUO, data, "quote");
+    if (!qid) return;
+    const rec = { ...data, id: qid, Vendor: { id, name }, Version: { id: S.picked }, Proposal: { id: S.deal.id, name: S.deal.Deal_Name } };
+    added.push({ m: QUO, rec, at: Date.now() });
+    S.quotes.push(rec); S.allQuotes.push(rec);
+    paint(); contactsOf(id).then(() => paint());
+  }
+}
+
+document.addEventListener("focusin", (e) => {
+  const el = e.target;
+  if (el.matches("input[data-f], select[data-f], input[data-pick]")) el.dataset.was = el.value;
+  if (el.dataset?.pick) showMatches(el);
+});
+document.addEventListener("input", (e) => {
+  const el = e.target;
+  if (el.id === "q") { S.q = el.value; return draw(); }
+  if (el.dataset.pick) { if (el.dataset.act === "newclient") S.newClient = null; showMatches(el); }
+});
+document.addEventListener("change", async (e) => {
+  const el = e.target;
+  if (el.id === "only") { S.only.proposals = el.checked; return draw(); }
+  if (el.dataset.award) { if (el.checked) S.award.add(el.dataset.award); else S.award.delete(el.dataset.award); S.sure = null; return paint(); }
+  if (el.dataset.multi) {
+    const { m, id, mf } = el.dataset;
+    const vals = [...document.querySelectorAll(`input[data-multi][data-m="${m}"][data-id="${id}"][data-mf="${mf}"]:checked`)].map((x) => x.value);
+    return saveValue(m, id, mf, vals);
+  }
+  if (el.matches("select[data-f], input[type=date][data-f], input[type=checkbox][data-f]")) return save(el);
+  if (el.matches("input[data-select]")) {
+    // one selected quote per type and version: shown at once, Zoho's script unticks the others behind it
+    const q = S.quotes.find((x) => x.id === el.dataset.select);
+    const same = S.quotes.filter((x) => x.Version?.id === q.Version?.id && x.Quote_Type === q.Quote_Type);
+    const before = same.filter((x) => x.Selected).map((x) => x.id);
+    same.forEach((x) => { x.Selected = x.id === q.id; recent.push({ m: QUO, id: x.id, data: { Selected: x.Selected }, at: Date.now() }); });
+    paint(); // shown at once; saved a moment later
+    queueSelection(q, before);
+  }
+});
+document.addEventListener("mousedown", (e) => { if (e.target.closest(".opts")) e.preventDefault(); });
+document.addEventListener("keydown", (e) => {
+  const el = e.target;
+  if (el.dataset?.pick) {
+    const box = el.parentElement.querySelector(".opts");
+    if (e.key === "Enter") { e.preventDefault(); box.querySelector("button[data-choose]")?.click(); }
+    if (e.key === "Escape") { el.value = el.dataset.was ?? ""; box.style.display = "none"; el.blur(); }
+    return;
+  }
+  if (el.id === "np-name" && e.key === "Enter") return $("#np-create").click();
+  if (!el.matches("input[data-f]")) return;
+  if (e.key === "Enter") el.blur();
+  if (e.key === "Escape") { el.value = el.dataset.was ?? el.value; el.blur(); }
+});
+document.addEventListener("focusout", (e) => {
+  const el = e.target;
+  if (el.matches("input[data-f]:not([type=date]):not([type=checkbox])") && el.value !== el.dataset.was) save(el);
+  if (el.dataset?.pick === "contacts") setTimeout(() => { el.parentElement.querySelector(".opts").style.display = "none"; if (el.value !== el.dataset.was) el.value = el.dataset.was ?? ""; }, 150);
+  if (pending) setTimeout(paint, 0);
+});
+// a button that creates something works once per click: while Zoho answers it is locked, so a double click (or a
+// keypress on the focused button) cannot add the record twice
+const ONCE = ["addv", "np-create", "add-note"];
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("button,tr,th,a,input,label") || e.target;
+  const once = ONCE.includes(t.id) || t.dataset.addon || t.dataset.accept || t.dataset.acceptmany || t.dataset.delv || t.dataset.delq;
+  if (!once) return onClick(e, t);
+  if (S.busy) return say("Still working on the last click…");
+  S.busy = true; t.disabled = true; t.blur();
+  try { await onClick(e, t); } finally { S.busy = false; t.disabled = false; }
+});
+async function onClick(e, t) {
+  if (!e.target.closest(".pick")) document.querySelectorAll(".opts").forEach((o) => (o.style.display = "none"));
+  if (t.dataset.choose) return choose(t);
+  if (t.dataset.mode) return showList(t.dataset.mode);
+  if (t.id === "back") { if (S.view === "quote") { S.view = "record"; return draw(); } return showList(S.mode); }
+  if (t.dataset.rgroup) { S.rgroup.pipeline = t.dataset.rgroup; return draw(); }
+  if (t.dataset.sort) {
+    const [key, k] = t.dataset.sort.split("|");
+    const s = S.sort[key];
+    S.sort[key] = s && s.k === k ? { k, d: -s.d } : { k, d: 1 };
+    return draw();
+  }
+  if (t.dataset.goproject) return openZoho(PROJ, t.dataset.goproject); // projects and companies live on Zoho's own pages
+  if (t.dataset.gocompany) return openZoho("Accounts", t.dataset.gocompany);
+  if (t.dataset.goproposal) return openDeal(t.dataset.goproposal);
+  if (t.dataset.zoho) return openZoho(t.dataset.ent || QUO, t.dataset.zoho);
+  if (t.matches("tr[data-open]") && !e.target.closest("button,input,select,a")) {
+    const id = t.dataset.id;
+    return t.dataset.open === "project" ? openZoho(PROJ, id) : openDeal(id);
+  }
+  if (t.matches("tr[data-v]") && !e.target.closest("input,button,select") && t.dataset.v !== S.picked) { S.picked = t.dataset.v; return paint(); }
+  if (t.id === "addv") {
+    // numbered here (.1, .2 …) so Zoho's numbering script leaves the title alone
+    const no = Math.max(0, ...S.versions.map((v) => Number(v[V.no]) || 0)) + 1;
+    // Zoho's script renames it ProposalID.n and adds it to the proposal's scope table
+    const id = await insert(VER, { _RecordName: "New version", Name: "New version", Proposal: S.deal.id, Status: "Open", [V.no]: no }, "version");
+    if (!id) return;
+    const rec = { id, Name: "New version", [V.no]: no, Proposal: { id: S.deal.id, name: S.deal.Deal_Name } };
+    added.push({ m: VER, rec, at: Date.now() });
+    S.versions.push(rec); S.allVersions.push(rec); S.picked = id;
+    paint();
+    document.querySelector(`[data-m="${VER}"][data-id="${id}"][data-f="Name"]`)?.select();
+    return;
+  }
+  if (t.dataset.accept) {
+    if (S.sure !== t.dataset.accept) { S.sure = t.dataset.accept; say("Click Confirm to accept"); return paint(); }
+    return acceptVersions([t.dataset.accept]);
+  }
+  if (t.dataset.acceptmany) {
+    const ids = S.versions.filter((v) => S.award.has(v.id)).map((v) => v.id);
+    const mode = t.dataset.acceptmany;
+    if (!ids.length) return;
+    if (S.sure !== "many:" + mode) { S.sure = "many:" + mode; say(mode === "each" ? "Click Confirm: a project for each ticked version" : "Click Confirm: one project for the ticked versions"); return paint(); }
+    return acceptVersions(ids);
+  }
+  if (t.dataset.delv) {
+    if (S.sure !== "delv:" + t.dataset.delv) { S.sure = "delv:" + t.dataset.delv; say("Click Delete? to delete the version and its quotes"); return paint(); }
+    return deleteVersion(t.dataset.delv);
+  }
+  if (t.dataset.delq) {
+    if (S.sure !== "delq:" + t.dataset.delq) { S.sure = "delq:" + t.dataset.delq; say("Click Delete? to delete the quote"); return paint(); }
+    return deleteQuote(t.dataset.delq);
+  }
+  if (t.id === "quotation") { S.view = "quote"; return draw(); }
+  if (t.id === "print") return window.print();
+  if (t.id === "add-note") {
+    const txt = $("#note-text").value.trim();
+    if (!txt) return say("Type the note first", true);
+    say("Saving note…");
+    const r = await ZOHO.CRM.API.addNotes({ Entity: "Deals", RecordID: S.deal.id, Title: "Follow up", Content: txt }).catch((x) => x);
+    if (!ok(r)) return zohoSaid(r);
+    S.notes.unshift({ Note_Content: txt, Created_Time: new Date().toISOString(), Owner: { name: "you" } });
+    $("#note-text").value = "";
+    return saveValue("Deals", S.deal.id, "DV_Latest_Follow_Up", today);
+  }
+  if (t.dataset.addon) {
+    // an add-on is a proposal of its own (versions, quotes, Accept) tied to this proposal's project; Accept numbers its project -01, -02
+    const p = S.allProjects.find((x) => x.id === t.dataset.addon) || S.projects.find((x) => x.id === t.dataset.addon), deal = S.deal;
+    if (!p || !deal?.Account_Name) return say("This proposal has no client to copy", true);
+    const name = `${deal.Deal_Name || p.Name} - add-on`;
+    const day = (n) => new Date(Date.now() + n * 864e5).toLocaleDateString("en-CA");
+    const layout = S.deals.find((d) => d.Layout?.id)?.Layout?.id;
+    const data = { Deal_Name: name, Stage: "Preparing Proposal", Opportunity_Type: "Add On (Existing Project)", Parent_Project: p.id, ...(p.Version?.id ? { Addon_Parent_Version: p.Version.id } : {}), Proposal_Request_Date: today, Account_Name: deal.Account_Name.id,
+      ...(deal.Contact_Name ? { Contact_Name: deal.Contact_Name.id } : {}), Closing_Date: day(30), DV_Next_Follow_Up: day(7), ...(layout ? { Layout: { id: layout } } : {}) };
+    const id = await insert("Deals", data, "add-on proposal");
+    if (!id) return;
+    await wait(1500); // the proposal number comes from Zoho's script
+    await openDeal(id);
+    return document.querySelector(`[data-m="Deals"][data-id="${id}"][data-f="Deal_Name"]`)?.select();
+  }
+  if (t.id === "new") { $("#newform").style.display = "flex"; $("#np-name").focus(); return; }
+  if (t.id === "np-cancel") { $("#newform").style.display = "none"; return; }
+  if (t.id === "np-create") {
+    const name = $("#np-name").value.trim();
+    if (!name) return say("Type the Project Name first", true);
+    if (!S.newClient) return say("Pick the client from the list first", true);
+    let layout = S.deals.find((d) => d.Layout?.id)?.Layout?.id;
+    if (!layout) layout = ((await ZOHO.CRM.META.getLayouts({ Entity: "Deals" }))?.layouts || []).find((l) => l.name === "Standard")?.id;
+    const closing = new Date(Date.now() + 30 * 864e5).toLocaleDateString("en-CA");
+    const id = await insert("Deals", { Deal_Name: name, Stage: "Preparing Proposal", Closing_Date: closing, Proposal_Request_Date: today, Opportunity_Type: "New Opportunity", Account_Name: S.newClient, DV_Next_Follow_Up: new Date(Date.now() + 7 * 864e5).toLocaleDateString("en-CA"), ...(layout ? { Layout: { id: layout } } : {}) }, "proposal");
+    if (!id) return;
+    $("#newform").style.display = "none"; $("#np-name").value = ""; document.querySelector('[data-act="newclient"]').value = ""; S.newClient = null;
+    await wait(1500); // the proposal number comes from Zoho's script
+    return openDeal(id);
+  }
+}
+
+// a refused Zoho call rejects its promise: say why on the status line instead of hanging
+window.addEventListener("unhandledrejection", (e) => {
+  const r = e.reason;
+  const d = r?.data?.[0] ?? r;
+  say("Zoho said: " + (d?.message || String(d)) + (d?.details ? " " + JSON.stringify(d.details) : "") + (d?.code ? " (" + d.code + ")" : ""), true);
+});
+
+ZOHO.embeddedApp.on("PageLoad", async () => {
+  try {
+    if (loadCache()) { mapFields(); draw(); say("Showing the last copy · refreshing…"); } // instant on every visit after the first
+    const fresh = S.fieldsAt && Date.now() - S.fieldsAt < 864e5 && S.fields[QUO] && S.fields.Deals; // cache key dvt-widget-cache-1
+    if (!fresh) { // the field lists (picklists) change rarely: fetched once a day, not on every visit
+      await Promise.all([VER, QUO, "Deals"].map((m) => loadFields(m).catch(() => {})));
+      S.fieldsAt = Date.now(); mapFields();
+    }
+    await loadLists(!S.accounts.length);
+    paint();
+    say(`Up to date · ${time()} · ${S.loadSecs}s`);
+  } catch (err) {
+    say("Could not load: " + (err?.message || JSON.stringify(err)), true);
+    if (!S.deals.length) $("#main").innerHTML = `<div class="empty err">${esc(JSON.stringify(err))}</div>`;
+  }
+});
+ZOHO.embeddedApp.init();
+</script>
+</body>
+</html>
