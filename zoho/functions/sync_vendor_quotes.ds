@@ -18,8 +18,8 @@ void automation.sync_vendor_quotes(String versionId)
 	{
 		dealId = dealRef.get("id").toString();
 	}
-	verToRow = {"Selected":"DVT Won","Cancelled":"Cancelled","Abandoned":"Abandoned","Open":"Open"};
-	rowToVer = {"DVT Won":"Selected","Selected":"Selected","Cancelled":"Cancelled","Client Lost":"Cancelled","Client Won/DVT Lost":"Cancelled","Abandoned":"Abandoned"};
+	verToRow = {"Open":"Open","Selected":"Selected","Not Selected":"Not Selected","Cancelled":"Cancelled","Abandoned":"Abandoned"};
+	rowToVer = {"Open":"Open","Selected":"Selected","Not Selected":"Not Selected","Cancelled":"Cancelled","Abandoned":"Abandoned","DVT Won":"Selected"};
 	// ---------- 1. proposal scope row ----------
 	if(dealId != "")
 	{

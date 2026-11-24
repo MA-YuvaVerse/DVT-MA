@@ -1,0 +1,31 @@
+map validation_rule.dvt_won_requires_selected(String crmAPIRequest)
+{
+	// Validation rule on Proposals > Opportunity Status: DVT Won needs at least one Selected version.
+	entityMap = crmAPIRequest.toMap().get("record");
+	response = Map();
+	response.put("status","success");
+	stage = ifnull(entityMap.get("Stage"),"");
+	if(stage == "DVT Won")
+	{
+		rows = entityMap.get("Proposal_Services_Scope");
+		if(rows == null && entityMap.get("id") != null)
+		{
+			saved = zoho.crm.getRecordById("Deals",entityMap.get("id").toLong());
+			rows = saved.get("Proposal_Services_Scope");
+		}
+		found = false;
+		for each  r in ifnull(rows,List())
+		{
+			if(ifnull(r.get("Version_Status"),"") == "Selected")
+			{
+				found = true;
+			}
+		}
+		if(!found)
+		{
+			response.put("status","error");
+			response.put("message","Mark at least one version as Selected in Proposal Services/Scope before closing this proposal as DVT Won.");
+		}
+	}
+	return response;
+}

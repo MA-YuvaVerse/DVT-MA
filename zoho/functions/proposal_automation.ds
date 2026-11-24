@@ -3,7 +3,7 @@ void automation.proposal_automation(String dealId)
 	// Proposals (Deals) create/edit.
 	// Proposal ID, one Scope/Version record per scope row (Name = ProposalID.n, linked via the row's Version ID lookup),
 	// row -> version sync, Open > 45 days probability rule,
-	// and on DVT Won: Final Proposal Value + one Project per Selected version.
+	// and on DVT Won: Open versions -> Not Selected, Final Proposal Value + one Project per Selected version.
 	deal = zoho.crm.getRecordById("Deals",dealId.toLong());
 	if(deal.get("id") == null)
 	{
@@ -41,7 +41,8 @@ void automation.proposal_automation(String dealId)
 		upd.put("Proposal_ID",pid);
 	}
 	// row Version Status -> version Status
-	rowToVer = {"DVT Won":"Selected","Selected":"Selected","Cancelled":"Cancelled","Client Lost":"Cancelled","Client Won/DVT Lost":"Cancelled","Abandoned":"Abandoned"};
+	rowToVer = {"Open":"Open","Selected":"Selected","Not Selected":"Not Selected","Cancelled":"Cancelled","Abandoned":"Abandoned","DVT Won":"Selected"};
+	stage = ifnull(deal.get("Stage"),"");
 	// ---------- existing versions of this proposal ----------
 	verById = Map();
 	maxv = 0;
@@ -73,6 +74,13 @@ void automation.proposal_automation(String dealId)
 		if(rowToVer.containsKey(rs))
 		{
 			vs = rowToVer.get(rs);
+		}
+		// proposal closed as DVT Won: versions still Open become Not Selected
+		if(stage == "DVT Won" && vs == "Open")
+		{
+			vs = "Not Selected";
+			nr.put("Version_Status","Not Selected");
+			rowsChanged = true;
 		}
 		title = ifnull(r.get("Proposal_Title"),"");
 		if(title == "")
@@ -161,7 +169,6 @@ void automation.proposal_automation(String dealId)
 		newRows.add(nr);
 	}
 	// ---------- probability: stage settings give the %; Open for more than 45 days drops to 15% ----------
-	stage = ifnull(deal.get("Stage"),"");
 	sent = deal.get("Proposal_Sent_Date");
 	if((stage == "Open" || stage == "Open/HIGH") && sent == null)
 	{

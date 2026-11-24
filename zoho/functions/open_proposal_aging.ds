@@ -1,0 +1,25 @@
+void schedule.open_proposal_aging()
+{
+	// Daily schedule. Client rule: Open = 40%, Open more than 45 days = 15%, Open/HIGH = 75%
+	today = zoho.currentdate;
+	for each  pg in {1,2,3,4,5}
+	{
+		res = zoho.crm.searchRecords("Deals","(Stage:equals:Open)",pg,200);
+		for each  d in res
+		{
+			sent = d.get("Proposal_Sent_Date");
+			if(sent != null)
+			{
+				if(sent.toDate().daysBetween(today) > 45 && ifnull(d.get("Probability"),0).toLong() != 15)
+				{
+					r = zoho.crm.updateRecord("Deals",d.get("id").toLong(),{"Probability":15});
+					info r;
+				}
+			}
+		}
+		if(res.size() < 200)
+		{
+			break;
+		}
+	}
+}
