@@ -7,7 +7,7 @@ it reads and writes the existing records, and the existing Zoho scripts do the n
 |---|---|
 | Proposal, Proposal ID | Deals, `Proposal_ID` |
 | Version (.1 .2), price, title, accepted | `Scope_Versions`: `Name` (ProposalID.n), `Value`, `Title`, `Status` = Selected |
-| Quote, cost, selected, days, expiry | `Vendor_Quotes`: `Vendor_Cost`, `Is_Selected_Vendor`, `Est_Project_Days`, `Quote_Expiry_Date`, `Acquisition_Sensor` |
+| Quote, Quote ID, cost, selected, days, expiry | `Vendor_Quotes`: `Name` (= Quote ID, AQ/MQ number), `Vendor_Cost`, `Is_Selected_Vendor`, `Est_Project_Days`, `Quote_Expiry_Date`, `Acquisition_Sensor` |
 | Project, contract value | `Project`: `Project_number`, `Awarded_Contract_Value`, `Proposal_Version` |
 | Follow ups, city, due date, type | `Followup_Date`, `Next_Follow_up_Date`, `Opportunity_City`, `Proposal_Due_Date`, `Opportunity_Type1` |
 

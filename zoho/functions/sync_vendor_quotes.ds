@@ -246,7 +246,7 @@ void automation.sync_vendor_quotes(String versionId)
 			{
 				nm = nm.subString(0,120);
 			}
-			m.put("Name",nm);
+			newName = nm;
 			if(sel)
 			{
 				m.put("Quote_Status","Selected");
@@ -316,7 +316,9 @@ void automation.sync_vendor_quotes(String versionId)
 				{
 					m.put("Quote_Status","Quotes Received");
 				}
-				cr = zoho.crm.createRecord("Vendor_Quotes",m);
+				// placeholder name: assign_unique_id replaces it with the AQ / MQ number (the Quote ID)
+			m.put("Name",newName);
+			cr = zoho.crm.createRecord("Vendor_Quotes",m);
 				info cr;
 				if(cr.get("id") != null)
 				{

@@ -759,7 +759,7 @@ function renderProposal() {
       return `<tr>
         <td style="text-align:center"><input type="radio" name="sel-${type}" data-select="${q.id}" ${q.Selected ? "checked" : ""} ${won ? "disabled" : ""} title="The quote DroneView would use: its total feeds the margin"></td>
         <td>${q.Selected ? "<b>" : ""}${vid ? `<button class="link" style="font-weight:inherit;text-decoration:none;color:inherit" data-gocompany="${vid}" title="Open the vendor in Zoho (Accounts)">${esc(q.Vendor?.name || "")}</button>` : ""}${q.Selected ? "</b>" : ""}</td>
-        <td class="muted">${esc(q.Vendor_Quote_ID || "")}</td>
+        <td class="muted">${esc(/^(AQ|MQ)\d+$/.test(q.Name || "") ? q.Name : "…")}</td>
         ${acq ? `<td>${selId(QUO, q.id, "Acquisition_Sensor", q.Acquisition_Sensor, S.allSensors.filter((s) => s.Vendor?.id === vid).map((s) => ({ id: s.id, name: s.Name })))}</td>` : ""}
         <td class="num ${low != null && t === low ? "low" : ""}" ${low != null && t === low ? 'title="Lowest cost"' : ""}>${inp(QUO, q.id, "Cost", q.Cost, "num")}</td>
         <td class="num">${t != null && acres ? rate(t / acres) : t != null ? '<span class="muted" title="Type the Mapping Acres of this version">acres?</span>' : ""}</td>
@@ -1052,7 +1052,7 @@ async function addQuote(act, id, name) {
   {
     const type = act.split(":")[1];
     const pv = S.versions.find((v) => v.id === S.picked);
-    // Zoho's script adds the quote to the version's Acquisition / Mapping table and gives it its AQ / MQ number
+    // Zoho's scripts add the quote to the version's Acquisition / Mapping table and replace this placeholder Name with its AQ / MQ Quote ID
     const data = { Name: `${fullVer(pv)} | ${type} | ${name}`, Vendor: id, Quote_Type: type, Version: S.picked, Proposal: S.deal.id, Proposal_Version_ID: fullVer(pv), Sync_Status: "Active", Quote_Status: "Quotes Requested", Quote_Date: today };
     const box = document.activeElement;
     if (box?.dataset?.pick) { box.value = ""; box.dataset.was = ""; box.blur(); } // the picker closes so the new row shows at once

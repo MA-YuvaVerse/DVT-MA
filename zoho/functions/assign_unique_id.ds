@@ -3,7 +3,7 @@ void automation.assign_unique_id(String moduleName, String recId)
 	// Unique IDs (formats from the Prelim Redesign workbook). Only fills IDs that are missing; never renumbers.
 	// floor = highest ID in the workbook, so imported legacy IDs and new IDs never collide.
 	// Workflows (create or edit): Company 1393010, Contact 1397017, Sensor 1376008, Location 1390009, Vendor Quote 1428001.
-	// Vendor Quotes created by sync_vendor_quotes call this function directly (that create does not fire workflows).
+	// Vendor Quotes: the ID is the record Name (field label Quote ID). Those created by sync_vendor_quotes call this function directly (that create does not fire workflows).
 	rec = zoho.crm.getRecordById(moduleName,recId.toLong());
 	if(rec.get("id") == null)
 	{
@@ -44,11 +44,11 @@ void automation.assign_unique_id(String moduleName, String recId)
 	{
 		if(ifnull(rec.get("Quote_Type"),"") == "Mapping")
 		{
-			jobs.add({"f":"Vendor_Quote_ID","p":"MQ","w":6,"floor":8451});
+			jobs.add({"f":"Name","p":"MQ","w":6,"floor":8451});
 		}
 		else
 		{
-			jobs.add({"f":"Vendor_Quote_ID","p":"AQ","w":6,"floor":2873});
+			jobs.add({"f":"Name","p":"AQ","w":6,"floor":2873});
 		}
 	}
 	upd = Map();
@@ -113,6 +113,11 @@ void automation.assign_unique_id(String moduleName, String recId)
 				{
 					break;
 				}
+			}
+			if(moduleName != "Accounts")
+			{
+				// single-ID fields: the new ID replaces whatever was there (e.g. a new quote's placeholder name)
+				keep = List();
 			}
 			keep.add(pfx + (maxn + 1).toString().leftPad(wid).replaceAll(" ","0"));
 			upd.put(fld,keep.toString(", "));
