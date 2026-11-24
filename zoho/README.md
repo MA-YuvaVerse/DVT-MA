@@ -38,3 +38,7 @@ Deployed from the sandbox, then fixed/completed here:
 - Live test passed end to end (proposal ID, versions, quotes AQ/MQ, cost roll-up, margin, quote edit sync, DVT Won -> project, ID rule); test records deleted.
 - Aligned with the sandbox: BPC = MV0001, Kucera = "C0110, AV0025", contacts Ubasineke PM/CPM00409, Betts PM/CPM00410.
   Legacy Contacts rule "Update PM ID, Display Name" left as in the sandbox (untouched).
+- Contacts (live): Project Manager ID and Client PM ID are set on creation only and are unique. "Contact Unique ID" rule runs on
+  create only; the old "Update Client PM ID" field update was removed from "Update PM ID, Display Name" (display name and
+  contact status steps kept) and its definition deleted. Duplicate Jay Tinsman (no company) deleted; empty US Silica scope row removed.
+  Same Contacts change still to be made in the sandbox.
