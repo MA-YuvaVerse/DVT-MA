@@ -2,7 +2,10 @@
 
 Source of the Deluge functions deployed in Zoho, kept here as a backup.
 
-| Function | Trigger (workflow rule) | What it does |
+| Function | Workflow (trigger) | What it does |
 |---|---|---|
-| `proposal_automation` | Proposals (Deals): create or edit | Proposal ID (YY + 5 digits), version IDs (`.1`, `.2`…), one Scope/Version record per version row, current version → Current Proposal Value, Awarded Contract Value = sum of DVT Won versions, Opportunity Status + Probability (Open 40%, Open > 45 days 15%, Open/HIGH 75%), and on DVT Won creates the Project (`YYMM18##` + P/D/M/S/O; add-ons `parent-n`) with selected vendors and costs. |
-| `sync_vendor_quotes` | Scope/Versions: create or edit | Mirrors every Acquisition and Mapping quote row into the Vendor Quotes module (keyed on the subform row id; removed rows are flagged "Removed from Version"), enforces one final vendor per version (Selection Warning), and rolls the selected costs up to the version. |
+| `proposal_automation` | Proposals (Deals): create or edit | Proposal ID (YY + 5 digits). One Scope/Version record per scope row, named `ProposalID.n` and linked through the row's **Version ID** lookup; row edits are copied to the version (only changed fields, never duplicates). Open > 45 days sets Probability to 15%. On **DVT Won**: Final Proposal Value = sum of Selected versions, and one Project per Selected version (`YYMM18##` + P/D/M/S/O, add-ons `parent-n`) with **Proposal Version**, vendors and costs. Estimated Proposal Value stays manual. |
+| `sync_vendor_quotes` | Scope/Versions: create or edit | Version number + two-way sync with its proposal scope row (a version created on its own gets a new row). Acquisition and Mapping quote rows create/update Vendor Quotes (type Acquisition / Mapping), keyed by the row's Acq/Map Quote ID lookup. Mapping Cost/Acre = vendor cost / version Mapping Acres. Selected costs rolled up to the version. |
+| `vendor_quote_automation` | Vendor Quotes: create or edit | Edits on a Vendor Quote update its quote row; a Vendor Quote created on its own adds and links a new row (no duplicates). |
+
+Status mapping between the scope table (Version Status) and the version record (Status): DVT Won ↔ Selected, Cancelled / Client Lost / Client Won-DVT Lost → Cancelled, Abandoned ↔ Abandoned, everything else → Open.

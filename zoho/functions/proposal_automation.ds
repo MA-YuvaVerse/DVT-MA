@@ -1,9 +1,9 @@
 void automation.proposal_automation(String dealId)
 {
-	// Runs on every create/edit of a Proposal (Deals).
-	// 1) Proposal ID (YY + 5 digits)  2) Version IDs .1 .2 ...  3) one Scope/Version record per version row
-	// 4) Current version -> Current Proposal Value  5) Awarded Contract Value = sum of DVT Won versions
-	// 6) Opportunity Status + Probability   7) DVT Won version -> Project (YYMM18## + method suffix, add-ons parent-n)
+	// Proposals (Deals) create/edit.
+	// Proposal ID, one Scope/Version record per scope row (Name = ProposalID.n, linked via the row's Version ID lookup),
+	// row -> version sync, Open > 45 days probability rule,
+	// and on DVT Won: Final Proposal Value + one Project per Selected version.
 	deal = zoho.crm.getRecordById("Deals",dealId.toLong());
 	if(deal.get("id") == null)
 	{
@@ -11,7 +11,7 @@ void automation.proposal_automation(String dealId)
 	}
 	today = zoho.currentdate;
 	upd = Map();
-	// ---------- 1. Proposal ID ----------
+	// ---------- Proposal ID (YY + 5 digits) ----------
 	pid = ifnull(deal.get("Proposal_ID"),"");
 	if(pid == "")
 	{
@@ -40,79 +40,53 @@ void automation.proposal_automation(String dealId)
 		pid = yy + (maxn + 1).toString().leftPad(5).replaceAll(" ","0");
 		upd.put("Proposal_ID",pid);
 	}
-	// ---------- 2. Version IDs ----------
-	rows = ifnull(deal.get("Proposal_Services_Scope"),List());
+	// row Version Status -> version Status
+	rowToVer = {"DVT Won":"Selected","Selected":"Selected","Cancelled":"Cancelled","Client Lost":"Cancelled","Client Won/DVT Lost":"Cancelled","Abandoned":"Abandoned"};
+	// ---------- existing versions of this proposal ----------
+	verById = Map();
 	maxv = 0;
-	for each  r in rows
+	vers = zoho.crm.searchRecords("Scope_Versions","(Proposal_Name:equals:" + dealId + ")");
+	for each  v in vers
 	{
-		v = ifnull(r.get("Version_ID"),"");
-		if(v.contains("."))
+		verById.put(v.get("id").toString(),v);
+		nm = ifnull(v.get("Name"),"");
+		if(nm.startsWith(pid + "."))
 		{
-			sfx = v.getSuffix(".");
+			sfx = nm.subString(pid.length() + 1);
 			if(sfx.isNumber() && sfx.toLong() > maxv)
 			{
 				maxv = sfx.toLong();
 			}
 		}
 	}
-	openSet = {"New Request","Qualifying","Preparing Proposal","Open","Open/HIGH"};
+	rows = ifnull(deal.get("Proposal_Services_Scope"),List());
 	newRows = List();
 	rowsChanged = false;
+	selTotal = 0.0;
+	selRows = List();
 	for each  r in rows
 	{
 		nr = Map();
 		nr.put("id",r.get("id"));
-		v = ifnull(r.get("Version_ID"),"");
-		if(v == "")
+		rs = ifnull(r.get("Version_Status"),"");
+		vs = "Open";
+		if(rowToVer.containsKey(rs))
 		{
-			maxv = maxv + 1;
-			v = pid + "." + maxv;
-			nr.put("Version_ID",v);
-			rowsChanged = true;
+			vs = rowToVer.get(rs);
 		}
-		if(isNull(r.get("Version_Status")))
+		title = ifnull(r.get("Proposal_Title"),"");
+		if(title == "")
 		{
-			nr.put("Version_Status","New Request");
-			r.put("Version_Status","New Request");
-			rowsChanged = true;
+			title = ifnull(deal.get("Deal_Name"),"Version");
 		}
-		r.put("Version_ID",v);
-		newRows.add(nr);
-	}
-	// ---------- 3. Scope/Version records ----------
-	stateMap = {"Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA","Colorado":"CO","Connecticut":"CT","Delaware":"DE","Florida (United States)":"FL","Georgia":"GA","Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA","Kansas":"KS","Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD","Massachusetts":"MA","Michigan":"MI","Minnesota":"MN","Mississippi":"MS","Missouri":"MO","Montana (United States)":"MT","Nebraska":"NE","Nevada":"NV","New Hampshire":"NH","New Jersey":"NJ","New Mexico":"NM","New York":"NY","North Carolina":"NC","North Dakota":"ND","Ohio":"OH","Oklahoma":"OK","Oregon":"OR","Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC","South Dakota":"SD","Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT","Virginia":"VA","Washington":"WA","West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY"};
-	verRecs = Map();
-	existing = zoho.crm.searchRecords("Data_Aquisition","(Proposal_Name:equals:" + dealId + ")");
-	for each  e in existing
-	{
-		if(e.get("Proposal_Version_ID") != null)
-		{
-			verRecs.put(e.get("Proposal_Version_ID"),e);
-		}
-	}
-	for each  r in rows
-	{
-		v = r.get("Version_ID");
-		title = ifnull(r.get("Proposal_Title"),ifnull(deal.get("Deal_Name"),""));
 		dm = Map();
-		nm = v + " - " + title;
-		if(nm.length() > 120)
-		{
-			nm = nm.subString(0,120);
-		}
-		dm.put("Name",nm);
-		dm.put("Proposal_Name",dealId);
-		dm.put("Proposal_Version_ID",v);
-		dm.put("Version_Status",r.get("Version_Status"));
-		dm.put("Date_of_Proposal",r.get("Request_Date"));
-		dm.put("Project_City",deal.get("Opportunity_City"));
-		st = deal.get("Opportunity_State");
-		if(st != null && stateMap.containsKey(st))
-		{
-			dm.put("Project_State",stateMap.get(st));
-		}
+		dm.put("Title",title);
+		dm.put("Status",vs);
+		dm.put("Value",r.get("Proposal_Total"));
+		dm.put("Proposal_Cost",r.get("Proposal_Total"));
 		dm.put("Project_Type",r.get("Project_Type"));
 		dm.put("Project_Deliverables",r.get("Project_Deliverables"));
+		dm.put("Sensor_Type",r.get("Type"));
 		dm.put("Mapping_Acres",r.get("Mapping_Acres"));
 		dm.put("Flight_Acres",r.get("Flight_Acres"));
 		if(r.get("GSD") != null)
@@ -123,148 +97,120 @@ void automation.proposal_automation(String dealId)
 		{
 			dm.put("LiDAR_PPSM",r.get("LiDAR_PPSM").toDecimal().round(0).toLong());
 		}
-		dm.put("Proposal_Cost",r.get("Proposal_Total"));
-		if(verRecs.containsKey(v))
+		vref = r.get("P_Version");
+		vid = "";
+		if(vref != null)
 		{
-			zoho.crm.updateRecord("Data_Aquisition",verRecs.get(v).get("id"),dm);
+			vid = vref.get("id").toString();
 		}
-		else
+		if(vid == "" || !verById.containsKey(vid))
 		{
-			cr = zoho.crm.createRecord("Data_Aquisition",dm);
+			// new scope row -> create its Scope/Version record (no workflow trigger, so no duplicate row is added back)
+			maxv = maxv + 1;
+			dm.put("Name",pid + "." + maxv);
+			dm.put("Proposal_Name",dealId);
+			dm.put("Date_of_Proposal",ifnull(deal.get("Proposal_Request_Date"),today));
+			dm.put("Project_City",deal.get("Opportunity_City"));
+			cr = zoho.crm.createRecord("Scope_Versions",dm);
+			info cr;
 			if(cr.get("id") != null)
 			{
-				dm.put("id",cr.get("id"));
-				verRecs.put(v,dm);
+				vid = cr.get("id").toString();
+				nr.put("P_Version",vid);
+				rowsChanged = true;
+				dm.put("id",vid);
+				verById.put(vid,dm);
 			}
 		}
-	}
-	// ---------- 4. Current version / 5. Awarded value ----------
-	cur = ifnull(deal.get("Current_Version"),"");
-	curRow = null;
-	latestOpen = null;
-	latestAny = null;
-	awarded = 0.0;
-	anyWon = false;
-	for each  r in rows
-	{
-		latestAny = r;
-		if(openSet.contains(r.get("Version_Status")))
+		else
 		{
-			latestOpen = r;
-		}
-		if(r.get("Version_ID") == cur)
-		{
-			curRow = r;
-		}
-		if(r.get("Version_Status") == "DVT Won")
-		{
-			anyWon = true;
-			awarded = awarded + ifnull(r.get("Proposal_Total"),0).toDecimal();
-		}
-	}
-	// current = the version the user picked if it is still open; else latest open; else latest version
-	if(curRow == null || !openSet.contains(curRow.get("Version_Status")) && !anyWon)
-	{
-		if(latestOpen != null)
-		{
-			curRow = latestOpen;
-		}
-		else if(curRow == null)
-		{
-			curRow = latestAny;
-		}
-	}
-	if(anyWon)
-	{
-		for each  r in rows
-		{
-			if(r.get("Version_Status") == "DVT Won")
+			ex = verById.get(vid);
+			if(!ifnull(ex.get("Name"),"").startsWith(pid + "."))
 			{
-				curRow = r;
-				break;
+				maxv = maxv + 1;
+				dm.put("Name",pid + "." + maxv);
+			}
+			// update only what differs
+			ch = Map();
+			for each  k in dm.keys()
+			{
+				a = ifnull(dm.get(k),"").toString();
+				b = ifnull(ex.get(k),"").toString();
+				if(a.isNumber() && b.isNumber())
+				{
+					if(a.toDecimal() != b.toDecimal())
+					{
+						ch.put(k,dm.get(k));
+					}
+				}
+				else if(a != b)
+				{
+					ch.put(k,dm.get(k));
+				}
+			}
+			if(ch.size() > 0)
+			{
+				zoho.crm.updateRecord("Scope_Versions",vid.toLong(),ch,{"trigger":{"workflow"}});
 			}
 		}
+		if(vs == "Selected")
+		{
+			selTotal = selTotal + ifnull(r.get("Proposal_Total"),0).toDecimal();
+			selRows.add({"row":r,"vid":vid});
+		}
+		newRows.add(nr);
 	}
-	status = deal.get("Stage");
-	if(curRow != null)
-	{
-		if(curRow.get("Version_ID") != cur)
-		{
-			upd.put("Current_Version",curRow.get("Version_ID"));
-		}
-		if(anyWon)
-		{
-			upd.put("Current_Proposal_Value1",awarded);
-		}
-		else
-		{
-			upd.put("Current_Proposal_Value1",ifnull(curRow.get("Proposal_Total"),0));
-		}
-		// ---------- 6. single Opportunity Status ----------
-		if(anyWon)
-		{
-			status = "DVT Won";
-		}
-		else
-		{
-			status = curRow.get("Version_Status");
-		}
-		upd.put("Stage",status);
-	}
-	if(anyWon)
-	{
-		upd.put("Awarded_Contract_Value1",awarded);
-	}
+	// ---------- probability: stage settings give the %; Open for more than 45 days drops to 15% ----------
+	stage = ifnull(deal.get("Stage"),"");
 	sent = deal.get("Proposal_Sent_Date");
-	if((status == "Open" || status == "Open/HIGH") && sent == null)
+	if((stage == "Open" || stage == "Open/HIGH") && sent == null)
 	{
 		sent = today;
 		upd.put("Proposal_Sent_Date",today);
 	}
-	prob = 0;
-	if(status == "New Request")
+	if(stage == "Open" && sent != null && sent.toDate().daysBetween(today) > 45)
 	{
-		prob = 10;
-	}
-	else if(status == "Qualifying")
-	{
-		prob = 20;
-	}
-	else if(status == "Preparing Proposal")
-	{
-		prob = 40;
-	}
-	else if(status == "Open")
-	{
-		prob = 40;
-		if(sent != null && sent.toDate().daysBetween(today) > 45)
+		if(ifnull(deal.get("Probability"),-1).toLong() != 15)
 		{
-			prob = 15;
+			upd.put("Probability",15);
 		}
 	}
-	else if(status == "Open/HIGH")
+	// ---------- closure: DVT Won ----------
+	if(stage == "DVT Won")
 	{
-		prob = 75;
-	}
-	else if(status == "DVT Won")
-	{
-		prob = 100;
-	}
-	upd.put("Probability",prob);
-	// ---------- 7. Projects for won versions ----------
-	client = deal.get("Account_Name");
-	clientName = "";
-	if(client != null)
-	{
-		clientName = client.get("name");
-	}
-	parent = deal.get("Parent_Project");
-	prefix = today.toString("yyMM") + "18";
-	maxp = -1;
-	for each  r in rows
-	{
-		if(r.get("Version_Status") == "DVT Won" && ifnull(r.get("DVT_Project_Number"),"") == "")
+		if(ifnull(deal.get("Final_Proposal_Value"),0).toDecimal() != selTotal)
 		{
+			upd.put("Final_Proposal_Value",selTotal);
+		}
+		client = deal.get("Account_Name");
+		clientName = "";
+		if(client != null)
+		{
+			clientName = client.get("name");
+		}
+		parent = deal.get("Parent_Project");
+		parentNum = "";
+		if(parent != null)
+		{
+			prec = zoho.crm.getRecordById("Project",parent.get("id").toLong());
+			parentNum = ifnull(prec.get("Project_number"),"");
+		}
+		prefix = today.toString("yyMM") + "18";
+		maxp = -1;
+		kidCount = -1;
+		for each  item in selRows
+		{
+			r = item.get("row");
+			vid = item.get("vid");
+			if(vid == "")
+			{
+				continue;
+			}
+			ver = zoho.crm.getRecordById("Scope_Versions",vid.toLong());
+			if(ver.get("Project") != null)
+			{
+				continue;
+			}
 			sensor = ifnull(r.get("Type"),"");
 			sfx = "P";
 			if(sensor.startsWith("Drone"))
@@ -283,17 +229,15 @@ void automation.proposal_automation(String dealId)
 			{
 				sfx = "O";
 			}
-			pnum = "";
-			parentNum = "";
-			if(parent != null)
-			{
-				prec = zoho.crm.getRecordById("Project",parent.get("id").toLong());
-				parentNum = ifnull(prec.get("Project_number"),"");
-			}
 			if(parentNum != "")
 			{
-				kids = zoho.crm.searchRecords("Project","(Parent_Project:equals:" + parent.get("id") + ")");
-				pnum = parentNum + "-" + (kids.size() + 1);
+				if(kidCount < 0)
+				{
+					kids = zoho.crm.searchRecords("Project","(Parent_Project:equals:" + parent.get("id") + ")");
+					kidCount = kids.size();
+				}
+				kidCount = kidCount + 1;
+				pnum = parentNum + "-" + kidCount;
 			}
 			else
 			{
@@ -318,8 +262,7 @@ void automation.proposal_automation(String dealId)
 				pnum = prefix + maxp.toString().leftPad(2).replaceAll(" ","0") + sfx;
 			}
 			pm = Map();
-			title = ifnull(r.get("Proposal_Title"),ifnull(deal.get("Deal_Name"),""));
-			pname = clientName + " - " + title;
+			pname = clientName + " - " + ifnull(ver.get("Title"),ifnull(r.get("Proposal_Title"),""));
 			if(pname.length() > 120)
 			{
 				pname = pname.subString(0,120);
@@ -327,6 +270,8 @@ void automation.proposal_automation(String dealId)
 			pm.put("Name",pname);
 			pm.put("Project_number",pnum);
 			pm.put("Proposal",dealId);
+			pm.put("Version_ID",ver.get("Name"));
+			pm.put("Proposal_Version",vid);
 			if(client != null)
 			{
 				pm.put("Client",client.get("id"));
@@ -339,50 +284,43 @@ void automation.proposal_automation(String dealId)
 			{
 				pm.put("Owner",deal.get("Owner").get("id"));
 			}
-			if(parent != null && parentNum != "")
+			if(parentNum != "")
 			{
 				pm.put("Parent_Project",parent.get("id"));
 			}
-			pm.put("Version_ID",r.get("Version_ID"));
 			pm.put("Project_Status","Awarded");
 			pm.put("Award_Date",today);
-			pm.put("Awarded_Contract_Value",r.get("Proposal_Total"));
+			pm.put("Awarded_Contract_Value",ifnull(ver.get("Value"),r.get("Proposal_Total")));
 			pm.put("Acquisition_Method",sfx);
-			pm.put("Acres",r.get("Mapping_Acres"));
+			pm.put("Acres",ver.get("Mapping_Acres"));
 			pm.put("City",deal.get("Opportunity_City"));
 			pm.put("State",deal.get("Opportunity_State"));
-			vr = verRecs.get(r.get("Version_ID"));
-			if(vr != null && vr.get("id") != null)
+			pm.put("Acquisition_Cost",ver.get("Total_Vendor_Costs"));
+			pm.put("Processing_Cost",ver.get("Select_Mapping_Cost"));
+			pm.put("DVT_Mob_Costs",ver.get("Internal_Cost"));
+			if(ver.get("PID_or_Targets") != null)
 			{
-				full = zoho.crm.getRecordById("Data_Aquisition",vr.get("id").toLong());
-				if(full.get("Selected_Acq_Vendor") != null)
+				pm.put("PID_or_Targets",ver.get("PID_or_Targets"));
+			}
+			for each  q in ifnull(ver.get("Acquisition_Vendor_Quotes"),List())
+			{
+				if(ifnull(q.get("Is_Selected_Vendor"),false) == true && q.get("Acquisition_Vendor") != null)
 				{
-					pm.put("Acquisition_Vendor",full.get("Selected_Acq_Vendor").get("id"));
+					pm.put("Acquisition_Vendor",q.get("Acquisition_Vendor").get("id"));
 				}
-				pm.put("Acquisition_Cost",full.get("Total_Vendor_Costs"));
-				if(full.get("Selected_Mapping_Vendor") != null)
+			}
+			for each  q in ifnull(ver.get("Mapping_Quotes"),List())
+			{
+				if(ifnull(q.get("Is_Selected_Mapping_Vendor"),false) == true && q.get("Mapping_Vendor_Name") != null)
 				{
-					pm.put("Processing_Vendor",full.get("Selected_Mapping_Vendor").get("id"));
-				}
-				pm.put("Processing_Cost",full.get("Select_Mapping_Cost"));
-				pm.put("DVT_Mob_Costs",full.get("Internal_Cost"));
-				if(full.get("PID_or_Targets") != null)
-				{
-					pm.put("PID_or_Targets",full.get("PID_or_Targets"));
+					pm.put("Processing_Vendor",q.get("Mapping_Vendor_Name").get("id"));
 				}
 			}
 			cp = zoho.crm.createRecord("Project",pm);
 			info cp;
 			if(cp.get("id") != null)
 			{
-				for each  nr in newRows
-				{
-					if(nr.get("id") == r.get("id"))
-					{
-						nr.put("DVT_Project_Number",pnum);
-					}
-				}
-				rowsChanged = true;
+				zoho.crm.updateRecord("Scope_Versions",vid.toLong(),{"Project":cp.get("id")});
 				if(deal.get("Linked_Project") == null && upd.get("Linked_Project") == null)
 				{
 					upd.put("Linked_Project",cp.get("id"));
@@ -394,6 +332,9 @@ void automation.proposal_automation(String dealId)
 	{
 		upd.put("Proposal_Services_Scope",newRows);
 	}
-	resp = zoho.crm.updateRecord("Deals",dealId.toLong(),upd);
-	info resp;
+	if(upd.size() > 0)
+	{
+		resp = zoho.crm.updateRecord("Deals",dealId.toLong(),upd);
+		info resp;
+	}
 }

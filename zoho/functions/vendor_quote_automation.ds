@@ -1,0 +1,124 @@
+void automation.vendor_quote_automation(String vqId)
+{
+	// Vendor Quotes create/edit -> matching row in the Scope/Version's Acquisition or Mapping quote table.
+	// Edited record: its row is updated. New record (no row yet): a row is added and linked to it - never duplicated.
+	vq = zoho.crm.getRecordById("Vendor_Quotes",vqId.toLong());
+	if(vq.get("id") == null || vq.get("Scope_Version") == null)
+	{
+		return;
+	}
+	if(ifnull(vq.get("Sync_Status"),"") == "Removed from Version")
+	{
+		return;
+	}
+	verId = vq.get("Scope_Version").get("id").toString();
+	rec = zoho.crm.getRecordById("Scope_Versions",verId.toLong());
+	kind = ifnull(vq.get("Quote_Type"),"Acquisition");
+	if(kind == "Mapping")
+	{
+		sf = "Mapping_Quotes";
+		lk = "Map_Quote_ID";
+	}
+	else
+	{
+		sf = "Acquisition_Vendor_Quotes";
+		lk = "Acq_Quote_ID";
+	}
+	rows = ifnull(rec.get(sf),List());
+	rm = Map();
+	if(vq.get("Vendor") != null)
+	{
+		rm.put(if(kind == "Mapping","Mapping_Vendor_Name","Acquisition_Vendor"),vq.get("Vendor").get("id").toString());
+	}
+	rm.put(if(kind == "Mapping","Mapping_Vendor_Cost","Vendor_Cost"),vq.get("Vendor_Cost"));
+	rm.put(if(kind == "Mapping","Is_Selected_Mapping_Vendor","Is_Selected_Vendor"),ifnull(vq.get("Is_Selected_Vendor"),false));
+	rm.put("Comments",vq.get("Comments"));
+	if(kind == "Mapping")
+	{
+		if(vq.get("Est_Project_Days") != null)
+		{
+			rm.put("Est_Project_Days",vq.get("Est_Project_Days").toString());
+		}
+	}
+	else
+	{
+		rm.put("Vendor_Frame_Count",vq.get("Frame_Count"));
+		if(vq.get("Acquisition_Sensor") != null)
+		{
+			rm.put("Acquisition_Sensor_Name",vq.get("Acquisition_Sensor").get("id").toString());
+		}
+	}
+	rowKey = ifnull(vq.get("Subform_Row_ID"),"").toString();
+	myRow = null;
+	for each  r in rows
+	{
+		if(r.get(lk) != null && r.get(lk).get("id").toString() == vqId)
+		{
+			myRow = r;
+		}
+		else if(rowKey != "" && r.get("id").toString() == rowKey)
+		{
+			myRow = r;
+		}
+	}
+	newList = List();
+	changed = false;
+	if(myRow == null)
+	{
+		rm.put(lk,vqId);
+		for each  r in rows
+		{
+			newList.add({"id":r.get("id")});
+		}
+		newList.add(rm);
+		changed = true;
+	}
+	else
+	{
+		ch = {"id":myRow.get("id")};
+		for each  k in rm.keys()
+		{
+			a = ifnull(rm.get(k),"").toString();
+			ev = myRow.get(k);
+			b = ifnull(ev,"").toString();
+			if(b.contains("\"id\""))
+			{
+				b = ev.get("id").toString();
+			}
+			if(a.isNumber() && b.isNumber())
+			{
+				if(a.toDecimal() != b.toDecimal())
+				{
+					ch.put(k,rm.get(k));
+				}
+			}
+			else if(a != b)
+			{
+				ch.put(k,rm.get(k));
+			}
+		}
+		if(ch.size() > 1)
+		{
+			changed = true;
+			for each  r in rows
+			{
+				if(r.get("id") == myRow.get("id"))
+				{
+					newList.add(ch);
+				}
+				else
+				{
+					newList.add({"id":r.get("id")});
+				}
+			}
+		}
+	}
+	if(changed)
+	{
+		// trigger the version workflow so roll-ups, Cost/Acre and the row link are refreshed
+		um = Map();
+		um.put(sf,newList);
+		resp = zoho.crm.updateRecord("Scope_Versions",verId.toLong(),um,{"trigger":{"workflow"}});
+		info resp;
+	}
+}
