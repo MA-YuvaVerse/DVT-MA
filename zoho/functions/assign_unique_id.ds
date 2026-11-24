@@ -1,0 +1,126 @@
+void automation.assign_unique_id(String moduleName, String recId)
+{
+	// Unique IDs (formats from the Prelim Redesign workbook). Only fills IDs that are missing; never renumbers.
+	// floor = highest ID in the workbook, so imported legacy IDs and new IDs never collide.
+	// Workflows (create or edit): Company 1393010, Contact 1397017, Sensor 1376008, Location 1390009, Vendor Quote 1428001.
+	// Vendor Quotes created by sync_vendor_quotes call this function directly (that create does not fire workflows).
+	rec = zoho.crm.getRecordById(moduleName,recId.toLong());
+	if(rec.get("id") == null)
+	{
+		return;
+	}
+	jobs = List();
+	if(moduleName == "Accounts")
+	{
+		ctypes = ifnull(rec.get("Company_Type"),List());
+		csub = ifnull(rec.get("Company_Subtype"),"");
+		if(ctypes.contains("Customer"))
+		{
+			jobs.add({"f":"Base_Company_ID","p":"C","w":4,"floor":0});
+		}
+		if(csub == "Acquisition Vendor")
+		{
+			jobs.add({"f":"Base_Company_ID","p":"AV","w":4,"floor":0});
+		}
+		if(csub == "Mapping Vendor")
+		{
+			jobs.add({"f":"Base_Company_ID","p":"MV","w":4,"floor":0});
+		}
+	}
+	else if(moduleName == "Contacts")
+	{
+		jobs.add({"f":"Project_Manger_ID","p":"PM","w":5,"floor":407});
+		jobs.add({"f":"Client_PM_ID","p":"CPM","w":5,"floor":407});
+	}
+	else if(moduleName == "Acquisition_Vendor_Sensor")
+	{
+		jobs.add({"f":"Base_Acquisition_Vendor_Id","p":"AS","w":4,"floor":71});
+	}
+	else if(moduleName == "Vendor_Locations")
+	{
+		jobs.add({"f":"Location_ID","p":"LOC","w":4,"floor":0});
+	}
+	else if(moduleName == "Vendor_Quotes")
+	{
+		if(ifnull(rec.get("Quote_Type"),"") == "Mapping")
+		{
+			jobs.add({"f":"Vendor_Quote_ID","p":"MQ","w":6,"floor":8451});
+		}
+		else
+		{
+			jobs.add({"f":"Vendor_Quote_ID","p":"AQ","w":6,"floor":2873});
+		}
+	}
+	upd = Map();
+	for each  job in jobs
+	{
+		fld = job.get("f");
+		pfx = job.get("p");
+		wid = job.get("w").toLong();
+		cur = ifnull(upd.get(fld),ifnull(rec.get(fld),"")).toString();
+		keep = List();
+		has = false;
+		curList = cur.toList(",");
+		for each  tok in curList
+		{
+			tk = tok.trim();
+			if(tk.length() > 1)
+			{
+				core = tk.replaceAll("[0-9]","");
+				if(core.length() < tk.length())
+				{
+					keep.add(tk);
+				}
+				if(core == pfx)
+				{
+					has = true;
+				}
+			}
+		}
+		if(!has)
+		{
+			maxn = job.get("floor").toLong();
+			for each  pg in {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50}
+			{
+				if(moduleName == "Accounts")
+				{
+					res = zoho.crm.getRecords(moduleName,pg,200);
+				}
+				else
+				{
+					res = zoho.crm.searchRecords(moduleName,"(" + fld + ":starts_with:" + pfx + ")",pg,200);
+				}
+				for each  rr in res
+				{
+					vals = ifnull(rr.get(fld),"").toString().toList(",");
+					for each  tok2 in vals
+					{
+						t2 = tok2.trim();
+						if(t2.startsWith(pfx) && t2.length() == pfx.length() + wid)
+						{
+							nn = t2.subString(pfx.length());
+							if(nn.isNumber())
+							{
+								if(nn.toLong() > maxn)
+								{
+									maxn = nn.toLong();
+								}
+							}
+						}
+					}
+				}
+				if(res.size() < 200)
+				{
+					break;
+				}
+			}
+			keep.add(pfx + (maxn + 1).toString().leftPad(wid).replaceAll(" ","0"));
+			upd.put(fld,keep.toString(", "));
+		}
+	}
+	if(upd.size() > 0)
+	{
+		resp = zoho.crm.updateRecord(moduleName,recId.toLong(),upd);
+		info resp;
+	}
+}

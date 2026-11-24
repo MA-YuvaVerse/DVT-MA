@@ -321,6 +321,7 @@ void automation.sync_vendor_quotes(String versionId)
 				if(cr.get("id") != null)
 				{
 					vqId = cr.get("id").toString();
+				automation.assign_unique_id("Vendor_Quotes",vqId);
 				}
 			}
 			if(vqId != "")
