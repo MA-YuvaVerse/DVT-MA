@@ -36,3 +36,5 @@ Deployed from the sandbox, then fixed/completed here:
   ProposalID.1 / created where missing, set Selected and linked to their rows and existing projects.
 - IDs backfilled (workbook IDs where matched): 15 companies, 8 contacts, 11 sensors, 1 location.
 - Live test passed end to end (proposal ID, versions, quotes AQ/MQ, cost roll-up, margin, quote edit sync, DVT Won -> project, ID rule); test records deleted.
+- Aligned with the sandbox: BPC = MV0001, Kucera = "C0110, AV0025", contacts Ubasineke PM/CPM00409, Betts PM/CPM00410.
+  Legacy Contacts rule "Update PM ID, Display Name" left as in the sandbox (untouched).
