@@ -22,3 +22,9 @@ KPIs: Open proposals, Pipeline (Amount), Weighted (Expected Revenue), Open over 
 Projects in progress, Backlog, To be billed. Panels: Open over 45 days list, Open proposals by status,
 Invoicing, Mapping due from the sub, Projects by status, Vendor quotes expiring (new Vendor Quotes field Quote_Expiry_Date).
 Follow-ups due waits on a Next Follow-up date field (API rejects relative-date filters).
+
+## Margin formulas (Scope_Versions, Nov 24)
+- Contribution Margin = `${Value}-(${Total_Vendor_Costs}+${Select_Mapping_Cost}+${Internal_Cost})`
+- Contribution Margin % = `If(${Value}>0,(Value - those three costs)/${Value}*100,0)`
+They read the three cost fields directly, so the margin is right the moment the version is saved; Proposal Version Cost
+(same sum) is written by `sync_vendor_quotes` a few seconds later. With no Proposal Total (Value) the % is blank.
