@@ -344,7 +344,8 @@ function chosenCost(v, type, quotes = S.allQuotes) {
 }
 function verCalc(v, quotes) {
   // the account's rule (as in the 11-11 sheet): Contribution Margin = Proposal Total − (selected acquisition + selected mapping)
-  const price = num(v[V.price]), acres = num(v[V.acres]);
+  // total = Proposal Version Cost when filled, else the Proposal Total (Value) - the same as Zoho's formula
+  const price = num(v.Proposal_Cost) > 0 ? num(v.Proposal_Cost) : num(v[V.price]), acres = num(v[V.acres]);
   const acq = chosenCost(v, "Acquisition", quotes), map = chosenCost(v, "Mapping", quotes);
   const cost = acq != null || map != null ? (acq || 0) + (map || 0) : null;
   const cm = price != null && cost != null ? price - cost : null;

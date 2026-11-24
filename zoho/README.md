@@ -11,10 +11,11 @@ Source of the Deluge functions deployed in Zoho, kept here as a backup.
 Status mapping between the scope table (Version Status) and the version record (Status): DVT Won ↔ Selected, Cancelled / Client Lost / Client Won-DVT Lost → Cancelled, Abandoned ↔ Abandoned, everything else → Open.
 
 ## Cost rules (Nov 24, per the 11-11 sheet)
-- Contribution Margin (Scope_Versions) = `${Value}-(${Total_Vendor_Costs}+${Select_Mapping_Cost})`;
-  Contribution Margin % = `If(${Value}>0, margin/${Value}*100, 0)`.
+- Total = Proposal Version Cost (`Proposal_Cost`, typed) when filled, else Value (the scope row's Proposal Total).
+- Contribution Margin (Scope_Versions) = total - (`Total_Vendor_Costs` + `Select_Mapping_Cost`);
+  Contribution Margin % = margin / total * 100 (0 when there is no total).
 - Selected acquisition / mapping costs are rolled up by `sync_vendor_quotes`. No Proposal Version Cost total and no
-  Internal Cost (field deleted); Proposal_Cost keeps its last values and is no longer calculated.
+  Internal Cost (field deleted); Proposal_Cost is typed by the user (no automation).
 - Final Proposal Value (Deals) = sum of the Selected versions' Value (set at DVT Won by `proposal_automation`).
 - Open > 45 days -> 15%: the daily schedule counts from Proposal Request Date (else Created Time).
 
