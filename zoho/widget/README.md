@@ -12,7 +12,7 @@ it reads and writes the existing records, and the existing Zoho scripts do the n
 | Follow ups, city, due date, type | `Followup_Date`, `Next_Follow_up_Date`, `Opportunity_City`, `Proposal_Due_Date`, `Opportunity_Type1` |
 
 Behaviour in this account:
-- Version cost = selected acquisition + selected mapping + Internal Cost; margin = Value - cost (same as Zoho).
+- Contribution Margin = Proposal Total - (selected acquisition + selected mapping); % = margin / total (same as Zoho and the 11-11 sheet).
 - Picking a quote saves the version's Acquisition / Mapping table; Zoho's script copies it to Vendor Quotes and rolls the costs up.
 - Accept = the ticked versions' scope rows set to Selected + status DVT Won in one save. Zoho then makes one project per
   Selected version, sets the others Not Selected and fills Final Proposal Value.

@@ -140,7 +140,7 @@
 //   Vendor_Quotes = quotes (kept in step with each version's Acquisition / Mapping quote tables by Zoho's scripts),
 //   Project = projects (one per Selected version, made by Zoho's proposal script at DVT Won).
 // The screen adds nothing to the account: it reads and writes those modules, and Zoho's own scripts do the numbering,
-// the version <-> scope row sync, the cost roll-up (selected acquisition + selected mapping + internal cost) and the projects.
+// the version <-> scope row sync, the selected-cost roll-up (margin = total − (acquisition + mapping)) and the projects.
 // The adapter below translates this account's field names to the short names the screens were written with.
 // Original notes: The screen is for proposals only (team decision, Nov 23): companies,
 // contacts, vendor locations and sensors are kept on Zoho's own Accounts pages, and projects in Zoho's own DV Projects
@@ -343,12 +343,12 @@ function chosenCost(v, type, quotes = S.allQuotes) {
   return qs.length ? qs.reduce((a, q) => a + qTotal(q), 0) : null;
 }
 function verCalc(v, quotes) {
-  // the account's rule: Proposal Version Cost = selected acquisition + selected mapping + Internal Cost; margin = Value − cost
-  const price = num(v[V.price]), acres = num(v[V.acres]), internal = num(v.Internal_Cost);
+  // the account's rule (as in the 11-11 sheet): Contribution Margin = Proposal Total − (selected acquisition + selected mapping)
+  const price = num(v[V.price]), acres = num(v[V.acres]);
   const acq = chosenCost(v, "Acquisition", quotes), map = chosenCost(v, "Mapping", quotes);
-  const cost = acq != null || map != null || internal != null ? (acq || 0) + (map || 0) + (internal || 0) : null;
+  const cost = acq != null || map != null ? (acq || 0) + (map || 0) : null;
   const cm = price != null && cost != null ? price - cost : null;
-  return { price, acq, map, internal, cost, cm, cmPct: cm != null && price ? (cm / price) * 100 : null, perAcre: price != null && acres ? price / acres : null };
+  return { price, acq, map, cost, cm, cmPct: cm != null && price ? (cm / price) * 100 : null, perAcre: price != null && acres ? price / acres : null };
 }
 function propInfo(d, fresh) {
   const vs = (fresh || S.allVersions.filter((v) => v.Proposal?.id === d.id)).slice().sort(byVer);
@@ -723,8 +723,6 @@ function renderProposal() {
       <td class="num">${c.price != null && !num(v[V.acres]) ? '<span class="muted" title="Type the Mapping Acres: $/acre and the quotes\' cost per acre are worked out from it">acres?</span>' : rate(c.perAcre)}</td>
       <td class="num">${money(c.acq)}</td>
       <td class="num">${money(c.map)}</td>
-      <td class="num">${inp(VER, v.id, "Internal_Cost", v.Internal_Cost, "num")}</td>
-      <td class="num">${money(c.cost)}</td>
       <td class="num"><b>${money(c.cm)}</b></td>
       <td class="num">${pct(c.cmPct)}</td>
       <td>${S.quotes.filter((q) => q.Version?.id === v.id).length || ""}</td>
@@ -812,8 +810,8 @@ function renderProposal() {
       ${multi ? acceptButtons(awardIds, awardTotal) : ""}
       ${S.versions.length ? '<button id="quotation" title="The client quotation: print it or save it as a PDF; never shows costs">Quotation</button>' : ""}
       ${won || project ? "" : '<button id="addv">+ Version</button>'}</span></h2>
-    <table><tr>${multi ? '<th style="width:46px" title="Awarded by the client">Award</th>' : ""}<th style="width:92px" title="Version ID: the proposal number and the version">Version ID</th><th>Title</th><th class="num" style="width:100px">Proposal Total</th><th class="num" style="width:84px">Mapping Acres</th><th class="num" style="width:70px">$/Acre</th><th class="num" style="width:84px" title="Selected acquisition quote">Acq Cost</th><th class="num" style="width:84px" title="Selected mapping quote">Mapping Cost</th><th class="num" style="width:84px" title="DroneView's own cost on this version">Internal Cost</th><th class="num" style="width:90px" title="Proposal Version Cost = selected acquisition + selected mapping + internal cost">Version Cost</th><th class="num" style="width:104px" title="Proposal Total − Version Cost">Contribution Margin</th><th class="num" style="width:56px">CM %</th><th style="width:52px">Quotes</th>${multi ? "" : '<th style="width:120px"></th>'}<th style="width:30px"></th></tr>
-    ${vRows || `<tr><td colspan="15" class="empty">No versions yet. Click + Version.</td></tr>`}</table>
+    <table><tr>${multi ? '<th style="width:46px" title="Awarded by the client">Award</th>' : ""}<th style="width:92px" title="Version ID: the proposal number and the version">Version ID</th><th>Title</th><th class="num" style="width:100px">Proposal Total</th><th class="num" style="width:84px">Mapping Acres</th><th class="num" style="width:70px">$/Acre</th><th class="num" style="width:84px" title="Selected acquisition quote">Acq Cost</th><th class="num" style="width:84px" title="Selected mapping quote">Mapping Cost</th><th class="num" style="width:104px" title="Proposal Total − (selected acquisition + selected mapping)">Contribution Margin</th><th class="num" style="width:56px">CM %</th><th style="width:52px">Quotes</th>${multi ? "" : '<th style="width:120px"></th>'}<th style="width:30px"></th></tr>
+    ${vRows || `<tr><td colspan="13" class="empty">No versions yet. Click + Version.</td></tr>`}</table>
   </section>
   ${quoteTable("Acquisition")}
   ${quoteTable("Mapping")}

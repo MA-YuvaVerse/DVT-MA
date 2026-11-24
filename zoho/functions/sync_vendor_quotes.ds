@@ -405,12 +405,6 @@ void automation.sync_vendor_quotes(String versionId)
 			vupd.put("Select_Mapping_Cost",mapCost);
 		}
 	}
-	// version cost = selected acquisition + selected mapping + internal cost
-	verCost = ifnull(acqCost,0).toDecimal() + ifnull(mapCost,0).toDecimal() + ifnull(rec.get("Internal_Cost"),0).toDecimal();
-	if(rec.get("Proposal_Cost") == null || verCost != rec.get("Proposal_Cost").toDecimal())
-	{
-		vupd.put("Proposal_Cost",verCost);
-	}
 	if(vupd.size() > 0)
 	{
 		vr = zoho.crm.updateRecord("Scope_Versions",versionId.toLong(),vupd);

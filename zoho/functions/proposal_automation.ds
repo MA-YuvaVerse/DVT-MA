@@ -303,7 +303,6 @@ void automation.proposal_automation(String dealId)
 			pm.put("State",deal.get("Opportunity_State"));
 			pm.put("Acquisition_Cost",ver.get("Total_Vendor_Costs"));
 			pm.put("Processing_Cost",ver.get("Select_Mapping_Cost"));
-			pm.put("DVT_Mob_Costs",ver.get("Internal_Cost"));
 			if(ver.get("PID_or_Targets") != null)
 			{
 				pm.put("PID_or_Targets",ver.get("PID_or_Targets"));
