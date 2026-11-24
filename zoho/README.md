@@ -9,3 +9,16 @@ Source of the Deluge functions deployed in Zoho, kept here as a backup.
 | `vendor_quote_automation` | Vendor Quotes: create or edit | Edits on a Vendor Quote update its quote row; a Vendor Quote created on its own adds and links a new row (no duplicates). |
 
 Status mapping between the scope table (Version Status) and the version record (Status): DVT Won ↔ Selected, Cancelled / Client Lost / Client Won-DVT Lost → Cancelled, Abandoned ↔ Abandoned, everything else → Open.
+
+## Cost rules (Nov 24)
+- Proposal Version Cost (`Scope_Versions.Proposal_Cost`) = selected acquisition cost + selected mapping cost + Internal Cost
+  (calculated by `sync_vendor_quotes` on every version save; no longer copied from Value).
+- Final Proposal Value (Deals) = sum of the Selected versions' Value (set at DVT Won by `proposal_automation`).
+- Open > 45 days -> 15%: the daily schedule counts from Proposal Request Date (else Created Time).
+  The in-deal check in `proposal_automation` references `Proposal_Sent_Date`, which does not exist, so it is a no-op.
+
+## Dashboard "DroneView Home" (analytics 7550436000001382001)
+KPIs: Open proposals, Pipeline (Amount), Weighted (Expected Revenue), Open over 45 days (Open + 15%),
+Projects in progress, Backlog, To be billed. Panels: Open over 45 days list, Open proposals by status,
+Invoicing, Mapping due from the sub, Projects by status, Vendor quotes expiring (new Vendor Quotes field Quote_Expiry_Date).
+Follow-ups due waits on a Next Follow-up date field (API rejects relative-date filters).

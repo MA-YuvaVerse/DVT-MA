@@ -91,7 +91,6 @@ void automation.proposal_automation(String dealId)
 		dm.put("Title",title);
 		dm.put("Status",vs);
 		dm.put("Value",r.get("Proposal_Total"));
-		dm.put("Proposal_Cost",r.get("Proposal_Total"));
 		dm.put("Project_Type",r.get("Project_Type"));
 		dm.put("Project_Deliverables",r.get("Project_Deliverables"));
 		dm.put("Sensor_Type",r.get("Type"));
